@@ -67,6 +67,56 @@ pub fn abrir_instalado_no_lugar_da_copia() -> bool {
     }
 }
 
+/// Valor de `display` no pedido de captura que significa "papel de parede"
+/// (miniatura do cartão no Atendente) em vez de print da tela.
+pub const DISPLAY_MINIATURA: i32 = 1000;
+
+/// Resposta ao pedido de miniatura: a imagem do papel de parede do usuário
+/// logado (a área de trabalho sem janelas nem ícones).
+pub fn resposta_papel_de_parede(sid: String) -> base::message_proto::Message {
+    use base::message_proto::{Message, ScreenshotResponse};
+    let mut response = ScreenshotResponse::new();
+    response.sid = sid;
+    match ler_papel_de_parede() {
+        Some(data) => response.data = data.into(),
+        None => response.msg = "Papel de parede indisponível".to_owned(),
+    }
+    let mut msg = Message::new();
+    msg.set_screenshot_response(response);
+    msg
+}
+
+#[cfg(windows)]
+fn ler_papel_de_parede() -> Option<Vec<u8>> {
+    const LIMITE: u64 = 20 * 1024 * 1024;
+    let mut candidatos = Vec::new();
+    // Cópia que o Windows mantém do papel de parede atual (JPEG, sem extensão).
+    if let Some(home) = crate::platform::windows::get_active_user_home() {
+        candidatos.push(home.join("AppData\\Roaming\\Microsoft\\Windows\\Themes\\TranscodedWallpaper"));
+    }
+    if let Ok(path) = wallpaper::get() {
+        if !path.is_empty() {
+            candidatos.push(std::path::PathBuf::from(path));
+        }
+    }
+    for path in candidatos {
+        match std::fs::metadata(&path) {
+            Ok(m) if m.is_file() && m.len() > 0 && m.len() <= LIMITE => {
+                if let Ok(data) = std::fs::read(&path) {
+                    return Some(data);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+#[cfg(not(windows))]
+fn ler_papel_de_parede() -> Option<Vec<u8>> {
+    None
+}
+
 fn non_empty(v: Option<&'static str>) -> Option<&'static str> {
     v.filter(|s| !s.trim().is_empty())
 }

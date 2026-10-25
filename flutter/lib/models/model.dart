@@ -4348,7 +4348,7 @@ class FFI {
         // GPROTECH: miniatura da tela para os cartões do Atendente
         if (!bind.isIncomingOnly()) {
           ffiModel.gprotechMiniatura
-              .iniciar(sessionId, () => ffiModel.pi.currentDisplay);
+              .iniciar(sessionId);
         }
       } finally {
         _applyPendingMonitorRestore();

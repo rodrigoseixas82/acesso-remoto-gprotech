@@ -1,9 +1,9 @@
 // GPROTECH: miniatura da tela da loja nos cartões de recentes/favoritos.
 //
-// Usa o pedido de captura de tela que o RustDesk já tem (o mesmo do menu
-// "Capturar tela"), só que salvando direto em arquivo, sem abrir diálogo.
-// A primeira captura sai alguns segundos depois de conectar e é refeita a
-// cada poucos minutos enquanto a sessão estiver aberta.
+// Usa o pedido de captura de tela que o RustDesk já tem, com um display
+// especial (1000) que o Cliente GPROTECH responde com o papel de parede: a
+// área de trabalho sem janelas nem ícones. Sai uma vez, logo após conectar,
+// e é salvo direto em arquivo, sem abrir diálogo.
 import 'dart:async';
 import 'dart:io';
 
@@ -14,9 +14,10 @@ import 'package:uuid/uuid.dart';
 
 import '../models/platform_model.dart';
 
-const _kPrimeiraCaptura = Duration(seconds: 8);
-const _kIntervalo = Duration(minutes: 5);
+const _kAtraso = Duration(seconds: 3);
 const _kLarguraMiniatura = 400;
+// Igual a DISPLAY_MINIATURA em src/gprotech.rs
+const _kDisplayMiniatura = 1000;
 
 Future<String>? _pastaFuture;
 
@@ -53,20 +54,15 @@ class GprotechMiniatura {
   Timer? _timer;
   bool pendente = false;
 
-  void iniciar(UuidValue sessionId, int Function() display) {
+  void iniciar(UuidValue sessionId) {
     parar();
     final supported = bind.sessionGetCommonSync(
         sessionId: sessionId, key: 'is_screenshot_supported', param: '');
     if (supported != 'true') return;
-    void pedir() {
+    _timer = Timer(_kAtraso, () {
       pendente = true;
-      final d = display();
-      bind.sessionTakeScreenshot(sessionId: sessionId, display: d < 0 ? 0 : d);
-    }
-
-    _timer = Timer(_kPrimeiraCaptura, () {
-      pedir();
-      _timer = Timer.periodic(_kIntervalo, (_) => pedir());
+      bind.sessionTakeScreenshot(
+          sessionId: sessionId, display: _kDisplayMiniatura);
     });
   }
 
@@ -100,9 +96,13 @@ class GprotechMiniatura {
   }
 }
 
+// O papel de parede costuma vir em JPEG; a miniatura é sempre gravada em PNG.
 List<int> _reduzir(Uint8List bytes) {
-  final image = img2.decodePng(bytes);
-  if (image == null || image.width <= _kLarguraMiniatura) return bytes;
-  return img2.encodePng(img2.copyResize(image,
-      width: _kLarguraMiniatura, interpolation: img2.Interpolation.average));
+  final image = img2.decodeImage(bytes);
+  if (image == null) return bytes;
+  final pequena = image.width <= _kLarguraMiniatura
+      ? image
+      : img2.copyResize(image,
+          width: _kLarguraMiniatura, interpolation: img2.Interpolation.average);
+  return img2.encodePng(pequena);
 }

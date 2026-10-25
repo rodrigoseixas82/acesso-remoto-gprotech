@@ -2,7 +2,6 @@ import 'package:dash_chat_2/dash_chat_2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/models/chat_model.dart';
-import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
@@ -137,7 +136,9 @@ class ChatPage extends StatelessWidget implements PageShape {
                       textColor: Colors.white,
                       maxWidth: constraints.maxWidth * 0.7,
                       messageTextBuilder: (message, _, __) {
-                        final isOwnMessage = message.user.id.isBlank!;
+                        // GPROTECH: "me" tem id (uuid), então isBlank nunca
+                        // identificava a própria mensagem.
+                        final isOwnMessage = message.user.id == chatModel.me.id;
                         return Column(
                           crossAxisAlignment: isOwnMessage
                               ? CrossAxisAlignment.end
@@ -157,15 +158,12 @@ class ChatPage extends StatelessWidget implements PageShape {
                       },
                       messageDecorationBuilder:
                           (message, previousMessage, nextMessage) {
-                        final isOwnMessage = message.user.id.isBlank!;
-                        // GPROTECH: cor por quem enviou, igual nos dois lados:
-                        // atendente em azul-escuro, cliente em verde.
-                        final isAtendente =
-                            isOwnMessage != bind.isIncomingOnly();
+                        final isOwnMessage = message.user.id == chatModel.me.id;
+                        // GPROTECH: quem usa este programa em verde, o outro lado em cinza.
                         return defaultMessageDecoration(
-                          color: isAtendente
-                              ? const Color(0xFF1E3A8A)
-                              : const Color(0xFF2E7D32),
+                          color: isOwnMessage
+                              ? const Color(0xFF2E7D32)
+                              : const Color(0xFF546E7A),
                           borderTopLeft: 8,
                           borderTopRight: 8,
                           borderBottomRight: isOwnMessage ? 2 : 8,

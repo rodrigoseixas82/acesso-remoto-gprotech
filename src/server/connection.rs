@@ -4095,7 +4095,11 @@ impl Connection {
                     // TODO: Maybe we can do a voice call from cm directly.
                 }
                 Some(message::Union::ScreenshotRequest(request)) => {
-                    if let Some(tx) = self.inner.tx.clone() {
+                    // GPROTECH: pedido de miniatura -> papel de parede, não print da tela
+                    if request.display == crate::gprotech::DISPLAY_MINIATURA {
+                        let msg_out = crate::gprotech::resposta_papel_de_parede(request.sid.clone());
+                        self.send(msg_out).await;
+                    } else if let Some(tx) = self.inner.tx.clone() {
                         crate::video_service::set_take_screenshot(
                             self.video_source(),
                             request.display as _,

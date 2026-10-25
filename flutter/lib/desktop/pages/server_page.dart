@@ -1027,7 +1027,8 @@ class _CmControlPanel extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: buildButton(context,
-                    color: MyTheme.accent,
+                    // GPROTECH: aceitar a ligação em verde
+                    color: Color(0xFF2E7D32),
                     onClick: () => handleVoiceCall(true),
                     icon: Icon(
                       Icons.call_rounded,
@@ -1055,6 +1056,10 @@ class _CmControlPanel extends StatelessWidget {
             ],
           ),
         ),
+        // GPROTECH: linha separando os botões da chamada de voz dos demais
+        if (client.inVoiceCall || client.incomingVoiceCall)
+          Divider(height: 18, thickness: 1, color: Colors.white24)
+              .marginSymmetric(horizontal: 8),
         Offstage(
           offstage: !client.fromSwitch,
           child: buildButton(context,
