@@ -23,7 +23,10 @@ env:
   VERSION: "1.5.1"
   GPROTECH_SERVER: "acesso.gprotech.com.br"
   GPROTECH_PUB_KEY: "HFMnWCRtF2l+XiO7xe+hffIyGYZRBIzvfMYuA2c8Pxo="
-  GPROTECH_APP_NAME: "GPROTECH-Suporte"
+  GPROTECH_WHATSAPP: "5585998228444"
+  # Senha interna da GPROTECH, só como hash (ver docs/04-senha-interna.md no projeto).
+  GPROTECH_PRESET_PASSWORD_HASH: ${{ secrets.GPROTECH_PRESET_PASSWORD_HASH }}
+  GPROTECH_PRESET_SALT: ${{ secrets.GPROTECH_PRESET_SALT }}
 
 jobs:
   generate-bridge:
@@ -39,9 +42,19 @@ jobs:
       target_version: Windows10
 
   build-windows:
-    name: Windows x64
+    name: Windows x64 (${{ matrix.edicao.id }})
     needs: [build-RustDeskTempTopMostWindow, generate-bridge]
     runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        edicao:
+          - { id: lojas, app-name: GPROTECH-Suporte, display-name: "GPROTECH Suporte" }
+          - { id: tecnico, app-name: GPROTECH-Tecnico, display-name: "GPROTECH Técnico" }
+    env:
+      GPROTECH_EDICAO: ${{ matrix.edicao.id }}
+      GPROTECH_APP_NAME: ${{ matrix.edicao.app-name }}
+      GPROTECH_DISPLAY_NAME: ${{ matrix.edicao.display-name }}
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
@@ -103,7 +116,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
-          prefix-key: windows-2022
+          prefix-key: windows-2022-${{ matrix.edicao.id }}
 
       - name: Setup vcpkg with Github Actions binary cache
         uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11
@@ -148,6 +161,11 @@ jobs:
         run: |
           grep -c "${GPROTECH_SERVER}" ./rustdesk/librustdesk.dll
           grep -c "${GPROTECH_PUB_KEY}" ./rustdesk/librustdesk.dll
+          if [ -n "${GPROTECH_PRESET_PASSWORD_HASH}" ]; then
+            echo "Senha interna: hash configurado (secret presente)"
+          else
+            echo "::warning::Secret GPROTECH_PRESET_PASSWORD_HASH ausente: build sem senha interna"
+          fi
 
       - name: find Runner.res
         continue-on-error: true
@@ -178,6 +196,6 @@ jobs:
       - name: Upload executável único
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: gprotech-suporte-windows-x64
+          name: ${{ matrix.edicao.app-name }}-windows-x64
           path: out/*.exe
           retention-days: 30

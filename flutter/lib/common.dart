@@ -3022,8 +3022,14 @@ int versionCmp(String v1, String v2) {
   return bind.versionToNumber(v: v1) - bind.versionToNumber(v: v2);
 }
 
+// GPROTECH: nome exibido ao usuário (com espaço); o APP_NAME interno não pode ter.
+String gprotechDisplayName() {
+  final name = bind.mainGetBuildinOption(key: 'gprotech-display-name');
+  return name.isNotEmpty ? name : bind.mainGetAppNameSync();
+}
+
 String getWindowName({WindowType? overrideType}) {
-  final name = bind.mainGetAppNameSync();
+  final name = gprotechDisplayName();
   switch (overrideType ?? kWindowType) {
     case WindowType.Main:
       return name;
@@ -4189,7 +4195,7 @@ List<String> getPrinterNames() {
 String _appName = '';
 String get appName {
   if (_appName.isEmpty) {
-    _appName = bind.mainGetAppNameSync();
+    _appName = gprotechDisplayName();
   }
   return _appName;
 }

@@ -92,6 +92,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       buildTip(context),
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
+      if (isIncomingOnly) buildGprotechSupportButton(context),
       FutureBuilder<Widget>(
         future: Future.value(
             Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
@@ -291,6 +292,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   buildPasswordBoard2(BuildContext context, ServerModel model) {
     RxBool refreshHover = false.obs;
     RxBool editHover = false.obs;
+    // GPROTECH: com a senha interna (permanente) não há senha a mostrar ao usuário.
+    if (bind.isIncomingOnly() &&
+        (model.approveMode == 'click' ||
+            model.verificationMethod == kUsePermanentPassword)) {
+      return const SizedBox.shrink();
+    }
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
@@ -382,6 +389,32 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // GPROTECH: abre o WhatsApp do suporte com o ID já na mensagem.
+  Widget buildGprotechSupportButton(BuildContext context) {
+    final phone = bind.mainGetBuildinOption(key: 'gprotech-whatsapp');
+    if (phone.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      margin: const EdgeInsets.only(left: 20, right: 16, top: 8, bottom: 8),
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.chat_outlined, size: 18),
+        label: const Text('Chamar o suporte no WhatsApp'),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+        onPressed: () {
+          final id = gFFI.serverModel.serverId.text.replaceAll(' ', '');
+          final text = Uri.encodeComponent(
+              'Olá, preciso de suporte. Meu ID GPROTECH é $id');
+          launchUrl(Uri.parse('https://wa.me/$phone?text=$text'),
+              mode: LaunchMode.externalApplication);
+        },
       ),
     );
   }
