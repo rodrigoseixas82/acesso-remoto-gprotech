@@ -611,9 +611,10 @@ class _CmHeaderState extends State<_CmHeader>
   bool get wantKeepAlive => true;
 
   Widget _buildClientAvatar() {
-    // GPROTECH: na edição cliente, ícone de atendimento no lugar da inicial.
+    // GPROTECH: na edição cliente, a foto do técnico (campo "Sua foto" do
+    // Atendente) ou, sem foto, o ícone de atendimento no lugar da inicial.
     if (bind.isIncomingOnly()) {
-      return Container(
+      final fone = Container(
         width: 70,
         height: 70,
         alignment: Alignment.center,
@@ -623,6 +624,12 @@ class _CmHeaderState extends State<_CmHeader>
         ),
         child: Icon(Icons.support_agent, color: Color(0xFF4FB3FF), size: 44),
       );
+      return buildAvatarWidget(
+              avatar: client.avatar,
+              size: 70,
+              borderRadius: 15,
+              fallback: fone) ??
+          fone;
     }
     return buildAvatarWidget(
           avatar: client.avatar,

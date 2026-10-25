@@ -117,6 +117,23 @@ fn ler_papel_de_parede() -> Option<Vec<u8>> {
     None
 }
 
+/// Opção local com a foto do técnico (campo "Sua foto" do Atendente), em data URI.
+pub const OPTION_FOTO_TECNICO: &str = "gprotech-foto-tecnico";
+
+/// Foto do técnico para ir na conexão (só no Atendente). Limite folgado abaixo
+/// dos 128 KB que o lado da loja aceita na mensagem de login.
+pub fn foto_tecnico() -> String {
+    if is_edicao_cliente() {
+        return String::new();
+    }
+    let foto = config::LocalConfig::get_option(OPTION_FOTO_TECNICO);
+    if foto.starts_with("data:image/") && foto.len() <= 64 * 1024 {
+        foto
+    } else {
+        String::new()
+    }
+}
+
 fn non_empty(v: Option<&'static str>) -> Option<&'static str> {
     v.filter(|s| !s.trim().is_empty())
 }

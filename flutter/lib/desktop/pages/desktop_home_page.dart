@@ -15,6 +15,7 @@ import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_hbb/gprotech/foto_tecnico.dart';
 import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
@@ -107,6 +108,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       if (!isOutgoingOnly) buildPasswordBoard(context),
       if (isIncomingOnly) buildGprotechSupportButton(context),
       if (!isIncomingOnly) buildGprotechNomeTecnico(context),
+      if (!isIncomingOnly) const GprotechFotoTecnico(),
       FutureBuilder<Widget>(
         future: Future.value(
             Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
@@ -475,7 +477,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         maxLength: 40,
         decoration: const InputDecoration(
           labelText: 'Seu nome',
-          helperText: 'Aparece para o cliente no atendimento',
+          helperText: 'Aparece para o cliente',
           counterText: '',
         ),
         onChanged: (v) => bind.mainSetLocalOption(
@@ -542,7 +544,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           ),
           if (!isOutgoingOnly)
             Text(
-              translate("desk_tip"),
+              // GPROTECH: texto próprio no Atendente
+              bind.isIncomingOnly()
+                  ? translate("desk_tip")
+                  : 'Seu computador também pode ser acessado através do número e da senha abaixo.',
               overflow: TextOverflow.clip,
               style: Theme.of(context).textTheme.bodySmall,
             ),

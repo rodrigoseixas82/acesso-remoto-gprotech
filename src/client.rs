@@ -3780,6 +3780,10 @@ impl LoginConfigHandler {
             (my_id, self.id.clone())
         };
         let mut avatar = get_builtin_option(keys::OPTION_AVATAR);
+        // GPROTECH: foto escolhida pelo técnico (campo "Sua foto" do Atendente)
+        if avatar.is_empty() {
+            avatar = crate::gprotech::foto_tecnico();
+        }
         if avatar.is_empty() {
             avatar = serde_json::from_str::<serde_json::Value>(&LocalConfig::get_option(
                 "user_info",
