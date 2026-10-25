@@ -14,6 +14,7 @@ import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
@@ -490,14 +491,19 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       return const SizedBox.shrink();
     }
     return Container(
-      margin: const EdgeInsets.only(left: 16, right: 16, top: 6, bottom: 4),
+      // GPROTECH: botão maior, com o logo do WhatsApp, para chamar a atenção
+      margin: const EdgeInsets.only(left: 12, right: 12, top: 8, bottom: 6),
       width: double.infinity,
+      height: 46,
       child: ElevatedButton.icon(
-        icon: const Icon(Icons.chat_outlined, size: 16),
+        icon: SvgPicture.asset('assets/whatsapp.svg', width: 22, height: 22),
         label: const Text('Chamar o suporte no WhatsApp',
-            maxLines: 1, style: TextStyle(fontSize: 13)),
+            maxLines: 1,
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8)),
         ),
         onPressed: () {
           final id = gFFI.serverModel.serverId.text.replaceAll(' ', '');

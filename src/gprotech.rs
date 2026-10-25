@@ -34,6 +34,15 @@ pub fn nome_tecnico() -> String {
         .to_owned()
 }
 
+/// Nome mostrado ao usuário, com espaços: "Aplicativos instalados", atalhos,
+/// menu Iniciar, bandeja, serviço e pasta de instalação. O APP_NAME interno
+/// continua sem espaços porque vai sem aspas em comandos `sc`, `taskkill` e `reg`.
+pub fn display_name() -> String {
+    non_empty(option_env!("GPROTECH_DISPLAY_NAME"))
+        .map(|s| s.trim().to_owned())
+        .unwrap_or_else(crate::get_app_name)
+}
+
 fn non_empty(v: Option<&'static str>) -> Option<&'static str> {
     v.filter(|s| !s.trim().is_empty())
 }

@@ -1444,7 +1444,8 @@ fn get_default_install_path() -> String {
             pf = tmp;
         }
     }
-    format!("{}\\{}", pf, crate::get_app_name())
+    // GPROTECH: pasta com o nome visível (com espaços); o .exe continua APP_NAME.
+    format!("{}\\{}", pf, crate::gprotech::display_name())
 }
 
 pub fn check_update_broker_process() -> ResultType<()> {
@@ -1500,7 +1501,7 @@ fn get_install_info_with_subkey(subkey: String) -> (String, String, String, Stri
     path = path.trim_end_matches('\\').to_owned();
     let start_menu = format!(
         "%ProgramData%\\Microsoft\\Windows\\Start Menu\\Programs\\{}",
-        crate::get_app_name()
+        crate::gprotech::display_name()
     );
     let exe = format!("{}\\{}.exe", path, crate::get_app_name());
     (subkey, path, start_menu, exe)
@@ -1653,7 +1654,9 @@ pub fn install_me(options: &str, path: String, silent: bool, debug: bool) -> Res
     if versions.len() > 2 {
         version_build = versions[2];
     }
-    let app_name = crate::get_app_name();
+    // GPROTECH: aqui app_name só nomeia atalhos, menu Iniciar e a entrada de
+    // "Aplicativos instalados"; por isso usa o nome visível (com espaços).
+    let app_name = crate::gprotech::display_name();
 
     let current_exe = std::env::current_exe()?;
     let cur_exe = current_exe
@@ -1694,7 +1697,7 @@ pub fn install_me(options: &str, path: String, silent: bool, debug: bool) -> Res
         shortcuts = format!(
             "copy /Y \"{}\\{}.lnk\" \"%PUBLIC%\\Desktop\\\"",
             tmp_path,
-            crate::get_app_name()
+            crate::gprotech::display_name()
         );
         reg_value_desktop_shortcuts = "1".to_owned();
     }
@@ -1740,7 +1743,8 @@ if exist \"{tmp_path}\\{app_name} Tray.lnk\" del /f /q \"{tmp_path}\\{app_name} 
         Config::set_option("api-server".into(), lic.api);
     }
 
-    let tray_shortcuts = if config::is_outgoing_only() {
+    // GPROTECH: só o Cliente fica na bandeja ao iniciar o Windows.
+    let tray_shortcuts = if config::is_outgoing_only() || !crate::gprotech::is_edicao_cliente() {
         "".to_owned()
     } else {
         format!("
@@ -1787,7 +1791,7 @@ reg add {subkey} /f /v DisplayVersion /t REG_SZ /d \"{version}\"
 reg add {subkey} /f /v Version /t REG_SZ /d \"{version}\"
 reg add {subkey} /f /v BuildDate /t REG_SZ /d \"{build_date}\"
 reg add {subkey} /f /v InstallLocation /t REG_SZ /d \"{path}\"
-reg add {subkey} /f /v Publisher /t REG_SZ /d \"{app_name}\"
+reg add {subkey} /f /v Publisher /t REG_SZ /d \"GPROTECH\"
 reg add {subkey} /f /v VersionMajor /t REG_DWORD /d {version_major}
 reg add {subkey} /f /v VersionMinor /t REG_DWORD /d {version_minor}
 reg add {subkey} /f /v VersionBuild /t REG_DWORD /d {version_build}
@@ -1910,7 +1914,8 @@ fn get_uninstall(kill_self: bool, uninstall_printer: bool) -> ResultType<String>
     ",
         before_uninstall=get_before_uninstall(kill_self)?,
         uninstall_amyuni_idd=get_uninstall_amyuni_idd(),
-        app_name = crate::get_app_name(),
+        // GPROTECH: atalhos têm o nome visível
+        app_name = crate::gprotech::display_name(),
     ))
 }
 
@@ -3355,11 +3360,12 @@ pub fn uninstall_service(show_new_window: bool, _: bool) -> bool {
         "
     chcp 65001
     {remove_service}
-    if exist \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\{app_name} Tray.lnk\" del /f /q \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\{app_name} Tray.lnk\"
+    if exist \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\{display_name} Tray.lnk\" del /f /q \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\{display_name} Tray.lnk\"
     taskkill /F /IM {broker_exe}
     taskkill /F /IM {app_name}.exe{filter}
     ",
         app_name = crate::get_app_name(),
+        display_name = crate::gprotech::display_name(),
         broker_exe = WIN_TOPMOST_INJECTED_PROCESS_EXE,
     );
     if let Err(err) = run_cmds(cmds, false, "uninstall") {
@@ -3386,15 +3392,24 @@ fn get_install_service_commands(path: &str, exe: &str) -> ResultType<InstallComm
     if let Some(icon) = shortcut_icon_location.as_deref() {
         validate_install_value(icon)?;
     }
+    // GPROTECH: atalho da bandeja com o nome visível e só no Cliente
+    let display_name = crate::gprotech::display_name();
     let (tray_shortcut_commands, tray_shortcut_file) =
-        staged_tray_shortcut_commands(&app_name, exe, shortcut_icon_location.as_deref())?;
+        staged_tray_shortcut_commands(&display_name, exe, shortcut_icon_location.as_deref())?;
+    let tray_shortcuts = if crate::gprotech::is_edicao_cliente() {
+        format!("
+{tray_shortcut_commands}
+copy /Y \"%RUSTDESK_OUTPUT_DIR%\\{display_name} Tray.lnk\" \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\\"
+")
+    } else {
+        "".to_owned()
+    };
     let filter = format!(" /FI \"PID ne {}\"", get_current_pid());
     let script = format!(
         "
 chcp 65001
 taskkill /F /IM {app_name}.exe{filter}
-{tray_shortcut_commands}
-copy /Y \"%RUSTDESK_OUTPUT_DIR%\\{app_name} Tray.lnk\" \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\\"
+{tray_shortcuts}
 {import_config}
 {create_service}
     ",
@@ -4044,12 +4059,13 @@ fn get_import_config(exe: &str) -> String {
     format!("
 sc stop {app_name}
 sc delete {app_name}
-sc create {app_name} binpath= \"\\\"{exe}\\\" --import-config \\\"{config_path}\\\"\" start= auto DisplayName= \"{app_name} Service\"
+sc create {app_name} binpath= \"\\\"{exe}\\\" --import-config \\\"{config_path}\\\"\" start= auto DisplayName= \"{display_name}\"
 sc start {app_name}
 sc stop {app_name}
 sc delete {app_name}
 ",
     app_name = crate::get_app_name(),
+    display_name = crate::gprotech::display_name(),
 )
 }
 
@@ -4061,14 +4077,15 @@ fn get_create_service(exe: &str) -> String {
     if stop {
         format!("
 if exist \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\{app_name} Tray.lnk\" del /f /q \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\{app_name} Tray.lnk\"
-", app_name = crate::get_app_name())
+", app_name = crate::gprotech::display_name())
     } else {
         let exe = escape_nested_cmd_ampersands(exe);
         format!("
-sc create {app_name} binpath= \"\\\"{exe}\\\" --service\" start= auto DisplayName= \"{app_name} Service\"
+sc create {app_name} binpath= \"\\\"{exe}\\\" --service\" start= auto DisplayName= \"{display_name}\"
 sc start {app_name}
 ",
-    app_name = crate::get_app_name())
+    app_name = crate::get_app_name(),
+    display_name = crate::gprotech::display_name())
     }
 }
 

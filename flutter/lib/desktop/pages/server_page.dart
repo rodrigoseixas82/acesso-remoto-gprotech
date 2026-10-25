@@ -929,11 +929,14 @@ class _CmControlPanel extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
+        // GPROTECH: botões da chamada um embaixo do outro (lado a lado o texto
+        // "Parar chamada de voz" não cabe na janela de 300 px)
         Offstage(
           offstage: !client.inVoiceCall,
-          child: Row(
+          child: Column(
             children: [
-              Expanded(
+              SizedBox(
+                width: double.infinity,
                 child: buildButton(context,
                     color: MyTheme.accent,
                     onClick: null, onTapDown: (details) async {
@@ -998,10 +1001,11 @@ class _CmControlPanel extends StatelessWidget {
                     text: "Audio input",
                     textColor: Colors.white),
               ),
-              Expanded(
+              SizedBox(
+                width: double.infinity,
                 child: buildButton(
                   context,
-                  color: Colors.red,
+                  color: Color(0xFFC62828),
                   onClick: () => closeVoiceCall(),
                   icon: Icon(
                     Icons.call_end_rounded,
@@ -1017,9 +1021,10 @@ class _CmControlPanel extends StatelessWidget {
         ),
         Offstage(
           offstage: !client.incomingVoiceCall,
-          child: Row(
+          child: Column(
             children: [
-              Expanded(
+              SizedBox(
+                width: double.infinity,
                 child: buildButton(context,
                     color: MyTheme.accent,
                     onClick: () => handleVoiceCall(true),
@@ -1031,10 +1036,11 @@ class _CmControlPanel extends StatelessWidget {
                     text: "Accept",
                     textColor: Colors.white),
               ),
-              Expanded(
+              SizedBox(
+                width: double.infinity,
                 child: buildButton(
                   context,
-                  color: Colors.red,
+                  color: Color(0xFFC62828),
                   onClick: () => handleVoiceCall(false),
                   icon: Icon(
                     Icons.phone_disabled_rounded,
