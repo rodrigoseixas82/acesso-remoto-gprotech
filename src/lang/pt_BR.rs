@@ -2,7 +2,7 @@ lazy_static::lazy_static! {
 pub static ref T: std::collections::HashMap<&'static str, &'static str> =
     [
         ("Status", "Status"),
-        ("Your Desktop", "Suporte GPROTECH"),
+        ("Your Desktop", "Suporte Remoto GPROTECH"),
         ("desk_tip", "Informe o ID e a senha ao técnico da GPROTECH para iniciar o atendimento."),
         ("Password", "Senha"),
         ("Ready", "Pronto"),

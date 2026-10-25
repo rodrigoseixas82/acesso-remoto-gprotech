@@ -13,7 +13,7 @@ CONFIG = os.path.join("libs", "hbb_common", "src", "config.rs")
 SERVER = os.environ.get("GPROTECH_SERVER", "acesso.gprotech.com.br")
 PUB_KEY = os.environ.get("GPROTECH_PUB_KEY", "HFMnWCRtF2l+XiO7xe+hffIyGYZRBIzvfMYuA2c8Pxo=")
 # Sem espaços: o nome vira nome de serviço do Windows (sc create <nome>) e de pastas.
-APP_NAME = os.environ.get("GPROTECH_APP_NAME", "GPROTECH-Suporte")
+APP_NAME = os.environ.get("GPROTECH_APP_NAME", "GPROTECH-Cliente")
 
 PATCHES = [
     (

@@ -644,9 +644,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   gradient: LinearGradient(
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
+                // GPROTECH: azul da marca no lugar do rosa do RustDesk
                 colors: [
-                  Color.fromARGB(255, 226, 66, 188),
-                  Color.fromARGB(255, 244, 114, 124),
+                  Color(0xFF3567FD),
+                  Color(0xFF2196F3),
                 ],
               )),
               padding: EdgeInsets.all(20),

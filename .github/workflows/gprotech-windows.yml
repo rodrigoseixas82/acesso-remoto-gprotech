@@ -49,8 +49,8 @@ jobs:
       fail-fast: false
       matrix:
         edicao:
-          - { id: lojas, app-name: GPROTECH-Suporte, display-name: "GPROTECH Suporte" }
-          - { id: tecnico, app-name: GPROTECH-Tecnico, display-name: "GPROTECH Técnico" }
+          - { id: cliente, app-name: GPROTECH-Cliente, display-name: "Suporte Remoto GPROTECH - Cliente", file-name: Suporte-Remoto-GPROTECH-Cliente }
+          - { id: atendente, app-name: GPROTECH-Atendente, display-name: "Suporte Remoto GPROTECH - Atendente", file-name: Suporte-Remoto-GPROTECH-Atendente }
     env:
       GPROTECH_EDICAO: ${{ matrix.edicao.id }}
       GPROTECH_APP_NAME: ${{ matrix.edicao.app-name }}
@@ -191,11 +191,11 @@ jobs:
           python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
           popd
           mkdir -p ./out
-          mv ./target/release/rustdesk-portable-packer.exe "./out/${GPROTECH_APP_NAME}-${VERSION}-x64.exe"
+          mv ./target/release/rustdesk-portable-packer.exe "./out/${{ matrix.edicao.file-name }}-${VERSION}-x64.exe"
 
       - name: Upload executável único
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ${{ matrix.edicao.app-name }}-windows-x64
+          name: ${{ matrix.edicao.file-name }}-windows-x64
           path: out/*.exe
           retention-days: 30

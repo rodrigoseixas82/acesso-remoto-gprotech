@@ -3,7 +3,7 @@
 //! Usa os mesmos mapas que o gerador de cliente personalizado do RustDesk preenche
 //! (HARD_SETTINGS, BUILTIN_SETTINGS, OVERWRITE_*), só que definidos em tempo de
 //! compilação. Variáveis de build:
-//! - `GPROTECH_EDICAO`: `lojas` (padrão, só recebe acesso) ou `tecnico`;
+//! - `GPROTECH_EDICAO`: `cliente` (padrão, só recebe acesso) ou `atendente`;
 //! - `GPROTECH_DISPLAY_NAME`: nome mostrado na janela (pode ter espaço);
 //! - `GPROTECH_WHATSAPP`: número do suporte (só dígitos, com DDI) para o botão;
 //! - `GPROTECH_PRESET_PASSWORD_HASH` / `GPROTECH_PRESET_SALT`: senha interna da
@@ -13,11 +13,12 @@
 use hbb_common::config;
 
 fn edicao() -> &'static str {
-    option_env!("GPROTECH_EDICAO").unwrap_or("lojas")
+    option_env!("GPROTECH_EDICAO").unwrap_or("cliente")
 }
 
-pub fn is_edicao_lojas() -> bool {
-    edicao() != "tecnico"
+/// Edição instalada nos clientes (lojas): só recebe acesso.
+pub fn is_edicao_cliente() -> bool {
+    edicao() != "atendente"
 }
 
 fn non_empty(v: Option<&'static str>) -> Option<&'static str> {
@@ -41,7 +42,7 @@ pub fn apply_defaults() {
         if let Some(name) = non_empty(option_env!("GPROTECH_DISPLAY_NAME")) {
             builtin.insert("gprotech-display-name".to_owned(), name.to_owned());
         }
-        if is_edicao_lojas() {
+        if is_edicao_cliente() {
             if let Some(phone) = non_empty(option_env!("GPROTECH_WHATSAPP")) {
                 builtin.insert("gprotech-whatsapp".to_owned(), phone.to_owned());
             }
@@ -54,7 +55,7 @@ pub fn apply_defaults() {
         .unwrap()
         .insert("theme".to_owned(), "dark".to_owned());
 
-    if !is_edicao_lojas() {
+    if !is_edicao_cliente() {
         return;
     }
 
