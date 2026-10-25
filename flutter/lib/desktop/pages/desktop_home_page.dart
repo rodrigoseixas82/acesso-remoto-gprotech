@@ -604,8 +604,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           bind.mainGotoInstall();
         });
       } else if (bind.mainIsInstalledLowerVersion()) {
+        // GPROTECH: arquivo mais novo que a versão instalada
         return buildInstallCard(
-            "Status", "Your installation is lower version.", "Click to upgrade",
+            "",
+            "Há uma versão nova deste programa. Clique em Atualizar para instalar.",
+            "Atualizar",
             () async {
           await rustDeskWinManager.closeAllSubWindows();
           bind.mainUpdateMe();

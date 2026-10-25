@@ -1012,7 +1012,8 @@ class _CmControlPanel extends StatelessWidget {
                     color: Colors.white,
                     size: 14,
                   ),
-                  text: "Stop voice call",
+                  // GPROTECH: texto curto, cabe no botão
+                  text: "Desligar",
                   textColor: Colors.white,
                 ),
               )

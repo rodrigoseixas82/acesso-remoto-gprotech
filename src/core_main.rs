@@ -93,6 +93,11 @@ pub fn core_main() -> Option<CoreMainAction> {
         }
         i += 1;
     }
+    // GPROTECH: arquivo baixado aberto com esta versão já instalada: abre o instalado.
+    #[cfg(windows)]
+    if args.is_empty() && crate::gprotech::abrir_instalado_no_lugar_da_copia() {
+        return None;
+    }
     #[cfg(any(target_os = "linux", target_os = "windows"))]
     if args.is_empty() {
         #[cfg(target_os = "linux")]

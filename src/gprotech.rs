@@ -43,6 +43,30 @@ pub fn display_name() -> String {
         .unwrap_or_else(crate::get_app_name)
 }
 
+/// Arquivo baixado aberto numa máquina que já tem esta mesma versão (ou uma
+/// mais nova) instalada: abre o programa instalado e devolve `true` para a cópia
+/// temporária encerrar. A cópia não conversa com o serviço instalado (o canal
+/// interno só aceita o mesmo executável) e ficaria em "Não está pronto".
+/// Se o arquivo for mais novo, segue aberto e mostra o aviso "Atualizar".
+#[cfg(windows)]
+pub fn abrir_instalado_no_lugar_da_copia() -> bool {
+    use crate::platform::windows as win;
+    if !win::is_installed()
+        || win::is_cur_exe_the_installed()
+        || crate::ui_interface::is_installed_lower_version()
+    {
+        return false;
+    }
+    let (_, _, _, exe) = win::get_install_info();
+    match std::process::Command::new(&exe).spawn() {
+        Ok(_) => true,
+        Err(e) => {
+            hbb_common::log::error!("GPROTECH: falha ao abrir {exe}: {e}");
+            false
+        }
+    }
+}
+
 fn non_empty(v: Option<&'static str>) -> Option<&'static str> {
     v.filter(|s| !s.trim().is_empty())
 }

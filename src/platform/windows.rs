@@ -1685,7 +1685,7 @@ pub fn install_me(options: &str, path: String, silent: bool, debug: bool) -> Res
     )?;
     let (uninstall_shortcut_commands, uninstall_shortcut_file) = staged_shortcut_commands(
         shortcut_bytes(&exe, Some("--uninstall"), Some("msiexec.exe"))?,
-        &format!("Uninstall {app_name}.lnk"),
+        &format!("Desinstalar {app_name}.lnk"),
     )?;
     let (tray_shortcut_commands, tray_shortcut_file) =
         staged_tray_shortcut_commands(&app_name, &exe, shortcut_icon_location.as_deref())?;
@@ -1706,7 +1706,7 @@ pub fn install_me(options: &str, path: String, silent: bool, debug: bool) -> Res
             "{shortcuts}
 md \"{start_menu}\"
 copy /Y \"{tmp_path}\\{app_name}.lnk\" \"{start_menu}\\\"
-copy /Y \"{tmp_path}\\Uninstall {app_name}.lnk\" \"{start_menu}\\\"
+copy /Y \"{tmp_path}\\Desinstalar {app_name}.lnk\" \"{start_menu}\\\"
      "
         );
         reg_value_start_menu_shortcuts = "1".to_owned();
@@ -1730,7 +1730,7 @@ copy /Y \"{tmp_path}\\Uninstall {app_name}.lnk\" \"{start_menu}\\\"
     let dels = format!(
         "
 if exist \"{tmp_path}\\{app_name}.lnk\" del /f /q \"{tmp_path}\\{app_name}.lnk\"
-if exist \"{tmp_path}\\Uninstall {app_name}.lnk\" del /f /q \"{tmp_path}\\Uninstall {app_name}.lnk\"
+if exist \"{tmp_path}\\Desinstalar {app_name}.lnk\" del /f /q \"{tmp_path}\\Desinstalar {app_name}.lnk\"
 if exist \"{tmp_path}\\{app_name} Tray.lnk\" del /f /q \"{tmp_path}\\{app_name} Tray.lnk\"
         "
     );
@@ -1802,7 +1802,7 @@ reg add {subkey} /f /v WindowsInstaller /t REG_DWORD /d 0
 {uninstall_shortcut_commands}
 {tray_shortcuts}
 {shortcuts}
-copy /Y \"{tmp_path}\\Uninstall {app_name}.lnk\" \"{path}\\\"
+copy /Y \"{tmp_path}\\Desinstalar {app_name}.lnk\" \"{path}\\\"
 {dels}
 {import_config}
 {after_install}
