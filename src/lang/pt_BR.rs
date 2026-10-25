@@ -3,7 +3,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
     [
         ("Status", "Status"),
         ("Your Desktop", "Suporte Remoto GPROTECH"),
-        ("desk_tip", "Informe o ID e a senha ao técnico da GPROTECH para iniciar o atendimento."),
+        ("desk_tip", "Informe este ID ao técnico da GPROTECH para iniciar o atendimento."),
         ("Password", "Senha"),
         ("Ready", "Pronto"),
         ("Established", "Estabelecido"),

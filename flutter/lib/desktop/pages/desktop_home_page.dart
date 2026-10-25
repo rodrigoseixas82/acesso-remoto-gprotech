@@ -37,6 +37,9 @@ const borderColor = Color(0xFF2F65BA);
 class _DesktopHomePageState extends State<DesktopHomePage>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final _leftPaneScrollController = ScrollController();
+  // GPROTECH: nome do técnico (edição atendente), enviado na conexão.
+  final _gprotechNomeController = TextEditingController(
+      text: bind.mainGetLocalOption(key: 'gprotech-nome-tecnico'));
 
   @override
   bool get wantKeepAlive => true;
@@ -93,6 +96,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
       if (isIncomingOnly) buildGprotechSupportButton(context),
+      if (!isIncomingOnly) buildGprotechNomeTecnico(context),
       FutureBuilder<Widget>(
         future: Future.value(
             Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
@@ -393,6 +397,24 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
+  // GPROTECH: campo "Seu nome"; o cliente vê esse nome durante o atendimento.
+  Widget buildGprotechNomeTecnico(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: 20, right: 16, top: 12, bottom: 8),
+      child: TextField(
+        controller: _gprotechNomeController,
+        maxLength: 40,
+        decoration: const InputDecoration(
+          labelText: 'Seu nome',
+          helperText: 'Aparece para o cliente no atendimento',
+          counterText: '',
+        ),
+        onChanged: (v) => bind.mainSetLocalOption(
+            key: 'gprotech-nome-tecnico', value: v.trim()),
+      ),
+    );
+  }
+
   // GPROTECH: abre o WhatsApp do suporte com o ID já na mensagem.
   Widget buildGprotechSupportButton(BuildContext context) {
     final phone = bind.mainGetBuildinOption(key: 'gprotech-whatsapp');
@@ -644,10 +666,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   gradient: LinearGradient(
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
-                // GPROTECH: azul da marca no lugar do rosa do RustDesk
+                // GPROTECH: vermelho para chamar a atenção (ex.: programa não instalado)
                 colors: [
-                  Color(0xFF3567FD),
-                  Color(0xFF2196F3),
+                  Color(0xFFC62828),
+                  Color(0xFFE53935),
                 ],
               )),
               padding: EdgeInsets.all(20),
@@ -908,6 +930,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     _uniLinksSubscription?.cancel();
     Get.delete<RxBool>(tag: 'stop-service');
     _updateTimer?.cancel();
+    _gprotechNomeController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

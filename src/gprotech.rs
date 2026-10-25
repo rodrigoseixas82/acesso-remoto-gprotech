@@ -21,6 +21,19 @@ pub fn is_edicao_cliente() -> bool {
     edicao() != "atendente"
 }
 
+/// Opção local com o nome do técnico (edição atendente), digitado no campo "Seu nome".
+pub const OPTION_NOME_TECNICO: &str = "gprotech-nome-tecnico";
+
+/// Nome que o técnico digitou; vai na conexão e aparece para o cliente.
+pub fn nome_tecnico() -> String {
+    if is_edicao_cliente() {
+        return String::new();
+    }
+    config::LocalConfig::get_option(OPTION_NOME_TECNICO)
+        .trim()
+        .to_owned()
+}
+
 fn non_empty(v: Option<&'static str>) -> Option<&'static str> {
     v.filter(|s| !s.trim().is_empty())
 }

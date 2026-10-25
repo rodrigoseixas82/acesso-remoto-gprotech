@@ -368,12 +368,16 @@ Widget buildConnectionCard(Client client) {
       key: ValueKey(client.id),
       children: [
         _CmHeader(client: client),
-        client.type_() == ClientType.file ||
-                client.type_() == ClientType.portForward ||
-                client.type_() == ClientType.terminal ||
-                client.disconnected
-            ? Offstage()
-            : _PrivilegeBoard(client: client),
+        // GPROTECH: na edição cliente, aviso simples no lugar da grade de permissões.
+        if (bind.isIncomingOnly())
+          client.disconnected ? Offstage() : _buildGprotechAviso()
+        else
+          client.type_() == ClientType.file ||
+                  client.type_() == ClientType.portForward ||
+                  client.type_() == ClientType.terminal ||
+                  client.disconnected
+              ? Offstage()
+              : _PrivilegeBoard(client: client),
         Expanded(
           child: Align(
             alignment: Alignment.bottomCenter,
@@ -382,6 +386,24 @@ Widget buildConnectionCard(Client client) {
         )
       ],
     ).paddingSymmetric(vertical: 4.0, horizontal: 8.0),
+  );
+}
+
+// GPROTECH: aviso ao cliente durante o atendimento.
+Widget _buildGprotechAviso() {
+  return Container(
+    width: double.infinity,
+    margin: EdgeInsets.symmetric(horizontal: 5.0),
+    padding: EdgeInsets.all(12.0),
+    decoration: BoxDecoration(
+      color: Color(0xFF002244),
+      borderRadius: BorderRadius.circular(10.0),
+    ),
+    child: Text(
+      'O técnico da GPROTECH está vendo e usando este computador. '
+      'Você pode encerrar o atendimento quando quiser.',
+      style: TextStyle(color: Color(0xFFCAD7FF), height: 1.5),
+    ),
   );
 }
 
@@ -461,9 +483,10 @@ class _CmHeaderState extends State<_CmHeader>
         gradient: LinearGradient(
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
+          // GPROTECH: azul da marca
           colors: [
-            Color(0xff00bfe1),
-            Color(0xff0071ff),
+            Color(0xFF4FB3FF),
+            Color(0xFF3567FD),
           ],
         ),
       ),
@@ -496,7 +519,10 @@ class _CmHeaderState extends State<_CmHeader>
                 )),
                 FittedBox(
                   child: Text(
-                    "(${client.peerId})",
+                    // GPROTECH: o cliente não precisa do ID do técnico.
+                    bind.isIncomingOnly()
+                        ? 'Técnico GPROTECH'
+                        : "(${client.peerId})",
                     style: TextStyle(color: Colors.white, fontSize: 14),
                   ),
                 ),
@@ -536,7 +562,9 @@ class _CmHeaderState extends State<_CmHeader>
                       client.authorized
                           ? client.disconnected
                               ? translate("Disconnected")
-                              : translate("Connected")
+                              : bind.isIncomingOnly()
+                                  ? 'Atendimento em andamento'
+                                  : translate("Connected")
                           : "${translate("Request access to your device")}...",
                       style: TextStyle(color: Colors.white),
                     ).marginOnly(right: 8.0),
@@ -583,6 +611,19 @@ class _CmHeaderState extends State<_CmHeader>
   bool get wantKeepAlive => true;
 
   Widget _buildClientAvatar() {
+    // GPROTECH: na edição cliente, ícone de atendimento no lugar da inicial.
+    if (bind.isIncomingOnly()) {
+      return Container(
+        width: 70,
+        height: 70,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Color(0xFF001324),
+          borderRadius: BorderRadius.circular(15.0),
+        ),
+        child: Icon(Icons.support_agent, color: Color(0xFF4FB3FF), size: 44),
+      );
+    }
     return buildAvatarWidget(
           avatar: client.avatar,
           size: 70,
@@ -1038,9 +1079,14 @@ class _CmControlPanel extends StatelessWidget {
           children: [
             Expanded(
               child: buildButton(context,
-                  color: Colors.redAccent,
+                  // GPROTECH: vermelho da marca e texto de atendimento na edição cliente
+                  color: bind.isIncomingOnly()
+                      ? Color(0xFFC62828)
+                      : Colors.redAccent,
                   onClick: handleDisconnect,
-                  text: 'Disconnect',
+                  text: bind.isIncomingOnly()
+                      ? 'Encerrar atendimento'
+                      : 'Disconnect',
                   icon: Icon(
                     Icons.link_off_rounded,
                     color: Colors.white,
