@@ -25,6 +25,11 @@ import 'package:window_manager/window_manager.dart';
 import 'package:window_size/window_size.dart' as window_size;
 import '../widgets/button.dart';
 
+// GPROTECH: cores do layout (cartões, textos secundários e ID)
+const _kGpCard = Color(0xFF002244);
+const _kGpMuted = Color(0xFF8FA3C7);
+const _kGpCyan = Color(0xFF37FFFF);
+
 class DesktopHomePage extends StatefulWidget {
   const DesktopHomePage({Key? key}) : super(key: key);
 
@@ -88,12 +93,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           alignment: Alignment.center,
           child: loadPowered(context),
         ),
+      // GPROTECH: logo menor e centralizado, como no layout
       Align(
         alignment: Alignment.center,
-        child: loadLogo(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: isIncomingOnly ? 48 : 52),
+          child: loadLogo(),
+        ),
       ),
       buildTip(context),
-      if (!isOutgoingOnly) buildIDBoard(context),
+      if (!isOutgoingOnly) buildGprotechIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
       if (isIncomingOnly) buildGprotechSupportButton(context),
       if (!isIncomingOnly) buildGprotechNomeTecnico(context),
@@ -134,7 +143,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
       child: Container(
-        width: isIncomingOnly ? 280.0 : 200.0,
+        // GPROTECH: mais largo, como no layout
+        width: isIncomingOnly ? 340.0 : 240.0,
         color: Theme.of(context).colorScheme.background,
         child: Stack(
           children: [
@@ -187,6 +197,66 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: ConnectionPage(),
+    );
+  }
+
+  // GPROTECH: ID em cartão arredondado (layout GPROTECH), nas duas edições.
+  Widget buildGprotechIDBoard(BuildContext context) {
+    final model = gFFI.serverModel;
+    final isIncomingOnly = bind.isIncomingOnly();
+    void copyId() {
+      Clipboard.setData(ClipboardData(text: model.serverId.text));
+      showToast(translate("Copied"));
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 6),
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+      decoration: BoxDecoration(
+          color: _kGpCard, borderRadius: BorderRadius.circular(10)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(translate("ID"),
+                  style: const TextStyle(fontSize: 12, color: _kGpMuted)),
+              const Spacer(),
+              if (!isIncomingOnly) buildPopupMenu(context),
+            ],
+          ),
+          Row(
+            children: [
+              Flexible(
+                child: GestureDetector(
+                  onDoubleTap: copyId,
+                  child: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: model.serverId,
+                    builder: (context, value, _) => FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        value.text,
+                        style: TextStyle(
+                            fontSize: isIncomingOnly ? 28 : 22,
+                            color: _kGpCyan,
+                            letterSpacing: 1),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: translate("Copy"),
+                icon: const Icon(Icons.copy_outlined,
+                    size: 16, color: _kGpMuted),
+                splashRadius: 16,
+                onPressed: copyId,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -305,27 +375,23 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
+    // GPROTECH: senha em cartão arredondado, como o ID
     return Container(
-      margin: EdgeInsets.only(left: 20.0, right: 16, top: 13, bottom: 13),
+      margin: EdgeInsets.only(left: 16.0, right: 16, top: 6, bottom: 6),
+      padding: EdgeInsets.fromLTRB(12, 8, 4, 6),
+      decoration: BoxDecoration(
+          color: _kGpCard, borderRadius: BorderRadius.circular(10)),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
         children: [
-          Container(
-            width: 2,
-            height: 52,
-            decoration: BoxDecoration(color: MyTheme.accent),
-          ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(left: 7),
+              padding: EdgeInsets.zero,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   AutoSizeText(
                     translate("One-time Password"),
-                    style: TextStyle(
-                        fontSize: 14, color: textColor?.withOpacity(0.5)),
+                    style: TextStyle(fontSize: 12, color: _kGpMuted),
                     maxLines: 1,
                   ),
                   Row(
@@ -344,10 +410,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                             readOnly: true,
                             decoration: InputDecoration(
                               border: InputBorder.none,
+                              filled: false,
+                              isDense: true,
                               contentPadding:
-                                  EdgeInsets.only(top: 14, bottom: 10),
+                                  EdgeInsets.only(top: 6, bottom: 4),
                             ),
-                            style: TextStyle(fontSize: 15),
+                            style: TextStyle(fontSize: 17, letterSpacing: 2),
                           ).workaroundFreezeLinuxMint(),
                         ),
                       ),
@@ -400,7 +468,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   // GPROTECH: campo "Seu nome"; o cliente vê esse nome durante o atendimento.
   Widget buildGprotechNomeTecnico(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(left: 20, right: 16, top: 12, bottom: 8),
+      margin: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 8),
       child: TextField(
         controller: _gprotechNomeController,
         maxLength: 40,
@@ -422,11 +490,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       return const SizedBox.shrink();
     }
     return Container(
-      margin: const EdgeInsets.only(left: 20, right: 16, top: 8, bottom: 8),
+      margin: const EdgeInsets.only(left: 16, right: 16, top: 6, bottom: 4),
       width: double.infinity,
       child: ElevatedButton.icon(
-        icon: const Icon(Icons.chat_outlined, size: 18),
-        label: const Text('Chamar o suporte no WhatsApp'),
+        icon: const Icon(Icons.chat_outlined, size: 16),
+        label: const Text('Chamar o suporte no WhatsApp',
+            maxLines: 1, style: TextStyle(fontSize: 13)),
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
@@ -445,7 +514,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final isOutgoingOnly = bind.isOutgoingOnly();
     return Padding(
       padding:
-          const EdgeInsets.only(left: 20.0, right: 16, top: 16.0, bottom: 5),
+          const EdgeInsets.only(left: 16.0, right: 16, top: 12.0, bottom: 2),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -516,7 +585,14 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     if (isWindows && !bind.isDisableInstallation()) {
       if (!bind.mainIsInstalled()) {
         return buildInstallCard(
-            "", bind.isOutgoingOnly() ? "" : "install_tip", "Install",
+            "",
+            bind.isOutgoingOnly()
+                ? ""
+                // GPROTECH: no Atendente, aviso curto (sem explicação)
+                : (bind.isIncomingOnly()
+                    ? "install_tip"
+                    : "O programa não está instalado. Clique em Instalar."),
+            "Install",
             () async {
           await rustDeskWinManager.closeAllSubWindows();
           bind.mainGotoInstall();
@@ -659,10 +735,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return Stack(
       children: [
         Container(
-          margin: EdgeInsets.fromLTRB(
-              0, marginTop, 0, bind.isIncomingOnly() ? marginTop : 0),
+          // GPROTECH: cartão arredondado com margem, como no layout
+          margin: EdgeInsets.fromLTRB(16, marginTop > 10 ? 10 : marginTop, 16,
+              bind.isIncomingOnly() ? 10 : 12),
           child: Container(
               decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
                   gradient: LinearGradient(
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
@@ -672,7 +750,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   Color(0xFFE53935),
                 ],
               )),
-              padding: EdgeInsets.all(20),
+              padding: EdgeInsets.all(14),
               child: Column(
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -696,8 +774,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                 height: 1.5,
                                 color: Colors.white,
                                 fontWeight: FontWeight.normal,
-                                fontSize: 13),
-                          ).marginOnly(bottom: 20)
+                                fontSize: 12),
+                          ).marginOnly(bottom: 12)
                       ] +
                       (btnText.isNotEmpty
                           ? <Widget>[
@@ -705,13 +783,13 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     FixedWidthButton(
-                                      width: 150,
-                                      padding: 8,
+                                      width: 120,
+                                      padding: 6,
                                       isOutline: true,
                                       text: translate(btnText),
                                       textColor: Colors.white,
                                       borderColor: Colors.white,
-                                      textSize: 20,
+                                      textSize: 15,
                                       radius: 10,
                                       onTap: onPressed,
                                     )
@@ -738,7 +816,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         if (closeButton != null && closeButton == true)
           Positioned(
             top: 18,
-            right: 0,
+            right: 16,
             child: IconButton(
               icon: Icon(
                 Icons.close,

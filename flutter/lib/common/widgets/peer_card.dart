@@ -12,6 +12,7 @@ import '../../common.dart';
 import '../../common/formatter/id_formatter.dart';
 import '../../models/peer_model.dart';
 import '../../models/platform_model.dart';
+import '../../gprotech/fundo_cartao.dart';
 import '../../desktop/widgets/material_mod_popup_menu.dart' as mod_menu;
 import '../../desktop/widgets/popup_menu.dart';
 import 'dart:math' as math;
@@ -302,7 +303,10 @@ class _PeerCardState extends State<_PeerCard>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Expanded(
-                  child: Container(
+                  // GPROTECH: miniatura da tela no lugar do ícone, se houver
+                  child: GprotechFundoCartao(
+                    peerId: peer.id,
+                    nome: name,
                     color: str2color('${peer.id}${peer.platform}', 0x7f),
                     child: Row(
                       children: [

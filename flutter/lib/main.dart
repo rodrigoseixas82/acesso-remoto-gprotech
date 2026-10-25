@@ -155,6 +155,16 @@ void runMainApp(bool startService) async {
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     // Restore the location of the main window before window hide or show.
     await restoreWindowPosition(WindowType.Main);
+    // GPROTECH: no Atendente, garante uma janela grande o bastante para a
+    // barra lateral (com o aviso de instalação) não ficar cortada.
+    if (!bind.isIncomingOnly()) {
+      final s = await windowManager.getSize();
+      if (s.width < 960 || s.height < 720) {
+        await windowManager.setSize(Size(s.width < 960 ? 960 : s.width,
+            s.height < 720 ? 720 : s.height));
+        await windowManager.center();
+      }
+    }
     // Check the startup argument, if we successfully handle the argument, we keep the main window hidden.
     final handledByUniLinks = await initUniLinks();
     debugPrint("handled by uni links: $handledByUniLinks");

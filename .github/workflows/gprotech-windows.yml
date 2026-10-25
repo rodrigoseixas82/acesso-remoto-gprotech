@@ -49,8 +49,8 @@ jobs:
       fail-fast: false
       matrix:
         edicao:
-          - { id: cliente, app-name: GPROTECH-Cliente, display-name: "Suporte Remoto GPROTECH - Cliente", file-name: Suporte-Remoto-GPROTECH-Cliente }
-          - { id: atendente, app-name: GPROTECH-Atendente, display-name: "Suporte Remoto GPROTECH - Atendente", file-name: Suporte-Remoto-GPROTECH-Atendente }
+          - { id: cliente, app-name: SuporteRemoto-GPROTECH-Cliente, display-name: "Suporte Remoto GPROTECH - Cliente", file-name: Suporte-Remoto-GPROTECH-Cliente }
+          - { id: atendente, app-name: SuporteRemoto-GPROTECH-Atendente, display-name: "Suporte Remoto GPROTECH - Atendente", file-name: Suporte-Remoto-GPROTECH-Atendente }
     env:
       GPROTECH_EDICAO: ${{ matrix.edicao.id }}
       GPROTECH_APP_NAME: ${{ matrix.edicao.app-name }}
@@ -148,6 +148,9 @@ jobs:
         run: |
           python3 .\build.py --portable --flutter --skip-portable-pack --hwcodec --vram
           mv ./flutter/build/windows/x64/runner/Release ./rustdesk
+          # O instalador procura <APP_NAME>.exe na pasta instalada; sem renomear,
+          # o atalho aponta para um arquivo que não existe (rustdesk.exe != APP_NAME).
+          Rename-Item ./rustdesk/rustdesk.exe "$env:GPROTECH_APP_NAME.exe"
 
           Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
           Expand-Archive usbmmidd_v2.zip -DestinationPath .
@@ -188,7 +191,7 @@ jobs:
           sed -i '/dpiAware/d' res/manifest.xml
           pushd ./libs/portable
           pip3 install -r requirements.txt
-          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
+          python3 ./generate.py -f ../../rustdesk/ -o . -e "../../rustdesk/${GPROTECH_APP_NAME}.exe"
           popd
           mkdir -p ./out
           mv ./target/release/rustdesk-portable-packer.exe "./out/${{ matrix.edicao.file-name }}-${VERSION}-x64.exe"

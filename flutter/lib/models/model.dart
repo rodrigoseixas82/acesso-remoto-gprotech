@@ -44,6 +44,7 @@ import '../common/widgets/dialog.dart';
 import 'input_model.dart';
 import 'platform_model.dart';
 import 'package:flutter_hbb/utils/scale.dart';
+import 'package:flutter_hbb/gprotech/miniatura.dart';
 
 import 'package:flutter_hbb/generated_bridge.dart'
     if (dart.library.html) 'package:flutter_hbb/web/bridge.dart';
@@ -135,6 +136,8 @@ class FfiModel with ChangeNotifier {
   bool isRefreshing = false;
 
   Timer? timerScreenshot;
+  // GPROTECH: capturas automáticas para a miniatura do cartão
+  final gprotechMiniatura = GprotechMiniatura();
 
   Rect? get rect => _rect;
   bool get isOriginalResolutionSet =>
@@ -262,6 +265,7 @@ class FfiModel with ChangeNotifier {
     clearPermissions();
     waitForImageTimer?.cancel();
     timerScreenshot?.cancel();
+    gprotechMiniatura.parar();
   }
 
   setConnectionType(
@@ -483,6 +487,11 @@ class FfiModel with ChangeNotifier {
 
   _handleScreenshot(
       Map<String, dynamic> evt, SessionID sessionId, String peerId) {
+    // GPROTECH: captura pedida para a miniatura; grava sem abrir diálogo.
+    if (gprotechMiniatura.pendente) {
+      gprotechMiniatura.salvar(sessionId, peerId, evt['msg'] ?? '');
+      return;
+    }
     timerScreenshot?.cancel();
     timerScreenshot = null;
     final msg = evt['msg'] ?? '';
@@ -4335,6 +4344,11 @@ class FFI {
         await canvasModel.initializeEdgeScrollEdgeThickness();
         for (final cb in imageModel.callbacksOnFirstImage) {
           cb(id);
+        }
+        // GPROTECH: miniatura da tela para os cartões do Atendente
+        if (!bind.isIncomingOnly()) {
+          ffiModel.gprotechMiniatura
+              .iniciar(sessionId, () => ffiModel.pi.currentDisplay);
         }
       } finally {
         _applyPendingMonitorRestore();
