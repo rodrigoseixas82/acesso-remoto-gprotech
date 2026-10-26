@@ -3600,7 +3600,15 @@ reg add {subkey} /f /v EstimatedSize /t REG_DWORD /d {size}
     };
 
     let filter = format!(" /FI \"PID ne {}\"", get_current_pid());
-    let restore_service_cmd = if is_service_running {
+    let restore_service_cmd = if crate::gprotech::is_edicao_cliente() {
+        // GPROTECH: no Cliente o serviço sempre volta ligado depois de atualizar
+        // (senão a loja fica inacessível). Espera o anterior terminar de parar e
+        // tenta de novo; `ping` como pausa porque `timeout` falha sem console.
+        // O `exit 0` final evita que "já está rodando" vire falha da atualização.
+        format!(
+            "ping -n 3 127.0.0.1 > nul\r\nsc start {app_name}\r\nping -n 5 127.0.0.1 > nul\r\nsc start {app_name}\r\ncmd /c exit 0"
+        )
+    } else if is_service_running {
         format!("sc start {}", &app_name)
     } else {
         "".to_owned()

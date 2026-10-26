@@ -45,9 +45,6 @@ const borderColor = Color(0xFF2F65BA);
 class _DesktopHomePageState extends State<DesktopHomePage>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final _leftPaneScrollController = ScrollController();
-  // GPROTECH: nome do técnico (edição atendente), enviado na conexão.
-  final _gprotechNomeController = TextEditingController(
-      text: bind.mainGetLocalOption(key: 'gprotech-nome-tecnico'));
 
   @override
   bool get wantKeepAlive => true;
@@ -501,46 +498,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   // GPROTECH: cartão "Seu perfil" (nome e foto que o cliente vê durante o
-  // atendimento), fixo no rodapé da barra lateral do Atendente.
+  // atendimento), fixo no rodapé da barra lateral do Atendente; travado, com
+  // "Editar" / "Salvar" / "Cancelar" (ver gprotech/foto_tecnico.dart).
   Widget buildGprotechPerfil(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: _kGpCard,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF1D3F66)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Seu nome',
-              style: TextStyle(fontSize: 11, color: _kGpMuted)),
-          const SizedBox(height: 4),
-          TextField(
-            controller: _gprotechNomeController,
-            maxLength: 40,
-            style: const TextStyle(fontSize: 13),
-            decoration: const InputDecoration(
-              counterText: '',
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 9),
-            ),
-            onChanged: (v) => bind.mainSetLocalOption(
-                key: 'gprotech-nome-tecnico', value: v.trim()),
-          ),
-          const SizedBox(height: 10),
-          const Text('Sua foto',
-              style: TextStyle(fontSize: 11, color: _kGpMuted)),
-          const SizedBox(height: 6),
-          const GprotechFotoTecnico(),
-          const SizedBox(height: 8),
-          const Text('Nome e foto aparecem para o cliente',
-              style: TextStyle(fontSize: 11, color: _kGpMuted)),
-        ],
-      ),
-    );
+    return const GprotechPerfilTecnico();
   }
 
   // GPROTECH: abre o WhatsApp do suporte com o ID já na mensagem.
@@ -1096,7 +1057,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     _uniLinksSubscription?.cancel();
     Get.delete<RxBool>(tag: 'stop-service');
     _updateTimer?.cancel();
-    _gprotechNomeController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

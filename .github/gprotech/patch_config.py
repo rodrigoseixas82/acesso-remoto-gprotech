@@ -10,6 +10,7 @@ import sys
 
 CONFIG = os.path.join("libs", "hbb_common", "src", "config.rs")
 RUNNER_RC = os.path.join("flutter", "windows", "runner", "Runner.rc")
+PUBSPEC = os.path.join("flutter", "pubspec.yaml")
 
 SERVER = os.environ.get("GPROTECH_SERVER", "acesso.gprotech.com.br")
 PUB_KEY = os.environ.get("GPROTECH_PUB_KEY", "HFMnWCRtF2l+XiO7xe+hffIyGYZRBIzvfMYuA2c8Pxo=")
@@ -74,6 +75,29 @@ def patch_runner_rc() -> int:
             print(f"Runner.rc: {key} encontrado {count} vez(es), esperado 1", file=sys.stderr)
             return 1
         print(f"ok: {line}")
+    # Número do build na versão (1.5.1.<build> / "Build <n>") e idioma
+    # Português (Brasil), como no arquivo baixado (libs/portable/build.rs).
+    build = os.environ.get("GPROTECH_BUILD", "").strip()
+    build = build if build.isdigit() else "0"
+    with open(PUBSPEC, encoding="utf-8") as f:
+        m = re.search(r"^version:\s*([0-9]+)\.([0-9]+)\.([0-9]+)", f.read(), re.M)
+    major, minor, patch = m.groups() if m else ("1", "5", "1")
+    product = f"Build {build}" if build != "0" else f"{major}.{minor}.{patch}"
+    extras = [
+        (r" FILEVERSION VERSION_AS_NUMBER", f" FILEVERSION {major},{minor},{patch},{build}"),
+        (r" PRODUCTVERSION VERSION_AS_NUMBER", f" PRODUCTVERSION {major},{minor},{patch},{build}"),
+        (r'VALUE "FileVersion", VERSION_AS_STRING', f'VALUE "FileVersion", "{major}.{minor}.{patch}.{build}"'),
+        (r'VALUE "ProductVersion", VERSION_AS_STRING', f'VALUE "ProductVersion", "{product}"'),
+        (r"LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US", "LANGUAGE LANG_PORTUGUESE, SUBLANG_PORTUGUESE_BRAZILIAN"),
+        (r'BLOCK "040904e4"', 'BLOCK "041604e4"'),
+        (r'VALUE "Translation", 0x409, 1252', 'VALUE "Translation", 0x416, 1252'),
+    ]
+    for pattern, replacement in extras:
+        src, count = re.subn(pattern, lambda _m: replacement, src)
+        if count != 1:
+            print(f"Runner.rc: {pattern} encontrado {count} vez(es), esperado 1", file=sys.stderr)
+            return 1
+        print(f"ok: {replacement}")
     with open(RUNNER_RC, "w", encoding="utf-8", newline="") as f:
         f.write(src)
     return 0
