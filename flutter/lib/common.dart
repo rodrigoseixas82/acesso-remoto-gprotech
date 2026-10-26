@@ -3842,7 +3842,9 @@ Widget loadIcon(double size) {
 
 var imcomingOnlyHomeSize = Size(280, 300);
 Size getIncomingOnlyHomeSize() {
-  final magicWidth = isWindows ? 11.0 : 2.0;
+  // GPROTECH: no Windows a borda invisível de redimensionar come 8 px de cada
+  // lado; com 11 sobravam 5 px cortados à direita e as laterais ficavam 16/11.
+  final magicWidth = isWindows ? 16.0 : 2.0;
   final magicHeight = 10.0;
   return imcomingOnlyHomeSize +
       Offset(magicWidth, kDesktopRemoteTabBarHeight + magicHeight);

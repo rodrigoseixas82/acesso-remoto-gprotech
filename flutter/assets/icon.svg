@@ -1,9 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <rect width="256" height="256" rx="56" fill="#001324"/>
-  <g fill="none" stroke="#4FB3FF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="98" y="52" width="114" height="80" rx="10"/>
-    <path d="M155 132v22M133 156h44"/>
-    <rect x="44" y="104" width="114" height="80" rx="10" fill="#001324"/>
-    <path d="M101 184v22M79 208h44"/>
-  </g>
+  <defs>
+    <linearGradient id="gt" gradientUnits="userSpaceOnUse" x1="16" y1="0" x2="240" y2="0"><stop offset="0" stop-color="#FFD000"/><stop offset=".55" stop-color="#FF7A00"/><stop offset="1" stop-color="#FF1A1A"/></linearGradient>
+    <linearGradient id="gr" gradientUnits="userSpaceOnUse" x1="0" y1="16" x2="0" y2="240"><stop offset="0" stop-color="#FF1A1A"/><stop offset=".5" stop-color="#A3169B"/><stop offset="1" stop-color="#1565FF"/></linearGradient>
+    <linearGradient id="gb" gradientUnits="userSpaceOnUse" x1="240" y1="0" x2="16" y2="0"><stop offset="0" stop-color="#1565FF"/><stop offset=".5" stop-color="#00B4C8"/><stop offset="1" stop-color="#16C23A"/></linearGradient>
+    <linearGradient id="gl" gradientUnits="userSpaceOnUse" x1="0" y1="240" x2="0" y2="16"><stop offset="0" stop-color="#16C23A"/><stop offset=".5" stop-color="#9BD300"/><stop offset="1" stop-color="#FFD000"/></linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="40" fill="#000"/>
+  <g><path d="M49 17H207A32 32 0 0 1 239 49" fill="none" stroke="url(#gt)" stroke-width="18"/><path d="M239 49V207A32 32 0 0 1 207 239" fill="none" stroke="url(#gr)" stroke-width="18"/><path d="M207 239H49A32 32 0 0 1 17 207" fill="none" stroke="url(#gb)" stroke-width="18"/><path d="M17 207V49A32 32 0 0 1 49 17" fill="none" stroke="url(#gl)" stroke-width="18"/></g>
+  <g fill="none" stroke="#37FFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" transform="translate(24 20) scale(.81)"><rect x="98" y="52" width="114" height="80" rx="10"/><path d="M155 132v22M133 156h44"/><rect x="44" y="104" width="114" height="80" rx="10" fill="#000"/><path d="M101 184v22M79 208h44"/></g>
 </svg>

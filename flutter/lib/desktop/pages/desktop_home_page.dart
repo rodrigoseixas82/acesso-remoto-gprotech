@@ -95,15 +95,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           alignment: Alignment.center,
           child: loadPowered(context),
         ),
-      // GPROTECH: logo menor e centralizado, como no layout
+      // GPROTECH: logo menor e centralizado, como no layout; nas duas edições
+      // com 10 px de folga abaixo da barra de título.
       Align(
         alignment: Alignment.center,
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: isIncomingOnly ? 48 : 52),
           child: loadLogo(),
         ),
-      ).marginOnly(
-          top: isIncomingOnly ? 10 : 0, bottom: isIncomingOnly ? 10 : 0),
+      ).marginOnly(top: 10, bottom: isIncomingOnly ? 10 : 0),
       buildTip(context),
       if (!isOutgoingOnly) buildGprotechIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
