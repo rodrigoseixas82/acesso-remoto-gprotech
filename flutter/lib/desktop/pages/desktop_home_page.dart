@@ -16,6 +16,7 @@ import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_hbb/gprotech/foto_tecnico.dart';
+import 'package:flutter_hbb/gprotech/procurar_atualizacoes.dart';
 import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
@@ -779,20 +780,13 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         );
       }
     }
+    // GPROTECH: no Cliente sai o botão "Sair" (o X já esconde a janela e o
+    // serviço segue ativo); no lugar, o link "Procurar atualizações".
     if (bind.isIncomingOnly()) {
-      return Align(
-        alignment: Alignment.centerRight,
-        child: OutlinedButton(
-          onPressed: () {
-            SystemNavigator.pop(); // Close the application
-            // https://github.com/flutter/flutter/issues/66631
-            if (isWindows) {
-              exit(0);
-            }
-          },
-          child: Text(translate('Quit')),
-        ),
-      ).marginAll(14);
+      if (isWindows && gprotechAtualizacaoAtiva() && bind.mainIsInstalled()) {
+        return const GprotechProcurarAtualizacoes();
+      }
+      return const SizedBox.shrink();
     }
     return Container();
   }

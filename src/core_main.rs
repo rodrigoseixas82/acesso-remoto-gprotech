@@ -98,6 +98,11 @@ pub fn core_main() -> Option<CoreMainAction> {
     if args.is_empty() && crate::gprotech::abrir_instalado_no_lugar_da_copia() {
         return None;
     }
+    // GPROTECH: Cliente aberto sem instalar fica sempre pronto para receber acesso.
+    #[cfg(windows)]
+    if args.is_empty() {
+        crate::gprotech::liberar_servico_sem_instalar();
+    }
     #[cfg(any(target_os = "linux", target_os = "windows"))]
     if args.is_empty() {
         #[cfg(target_os = "linux")]

@@ -68,6 +68,20 @@ pub fn abrir_instalado_no_lugar_da_copia() -> bool {
     }
 }
 
+/// Cliente aberto sem instalar (arquivo baixado): ao desinstalar, o RustDesk grava
+/// `stop-service = Y`, e a cópia baixada depois ficaria "Serviço não está em
+/// execução" (inacessível) até alguém clicar em "Iniciar Serviço". Aqui libera.
+#[cfg(windows)]
+pub fn liberar_servico_sem_instalar() {
+    if is_edicao_cliente()
+        && !crate::platform::windows::is_installed()
+        && config::Config::get_option("stop-service") == "Y"
+    {
+        config::Config::set_option("stop-service".to_owned(), "".to_owned());
+        hbb_common::log::info!("GPROTECH: serviço liberado no Cliente sem instalar");
+    }
+}
+
 /// Valor de `display` no pedido de captura que significa "papel de parede"
 /// (miniatura do cartão no Atendente) em vez de print da tela.
 pub const DISPLAY_MINIATURA: i32 = 1000;
@@ -357,6 +371,25 @@ mod atualizacao {
         });
     }
 
+    /// Link "Procurar atualizações" do Cliente: confere agora, sem esperar as 6 horas.
+    /// Devolve "nova:<página do Release>", "atual" ou "erro".
+    pub fn procurar_agora() -> String {
+        match conferir() {
+            Ok(pagina) => {
+                avisar(&pagina);
+                if pagina.is_empty() {
+                    "atual".to_owned()
+                } else {
+                    format!("nova:{pagina}")
+                }
+            }
+            Err(e) => {
+                log::warn!("GPROTECH: não foi possível conferir atualização: {e}");
+                "erro".to_owned()
+            }
+        }
+    }
+
     /// Arquivo a baixar quando o usuário clica em "Atualizar" (confere de novo).
     pub(crate) fn artefato_atualizacao() -> ResultType<crate::update_metadata::VerifiedUpdateArtifact> {
         let v = versao_publicada()?;
@@ -375,4 +408,4 @@ mod atualizacao {
 #[cfg(windows)]
 pub(crate) use atualizacao::artefato_atualizacao;
 #[cfg(windows)]
-pub use atualizacao::{checar_atualizacao, REPO_DONO, REPO_NOME};
+pub use atualizacao::{checar_atualizacao, procurar_agora, REPO_DONO, REPO_NOME};

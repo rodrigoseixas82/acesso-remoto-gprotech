@@ -2735,6 +2735,13 @@ pub fn main_get_common(key: String) -> String {
         return ui_interface::is_permanent_password_set().to_string();
     } else if key == "local-permanent-password-set" {
         return ui_interface::is_local_permanent_password_set().to_string();
+    } else if key == "gprotech-procurar-atualizacao" {
+        // GPROTECH: link "Procurar atualizações" do Cliente (consulta de rede:
+        // só pelo caminho assíncrono). Devolve "nova:<página>", "atual" ou "erro".
+        #[cfg(windows)]
+        return crate::gprotech::procurar_agora();
+        #[cfg(not(windows))]
+        return "erro".to_owned();
     } else {
         if key.starts_with("download-data-") {
             let id = key.replace("download-data-", "");
@@ -2775,7 +2782,7 @@ pub fn main_get_common_sync(key: String) -> SyncReturn<String> {
     }
     // Metadata verification performs blocking network requests. Keep this key on
     // the asynchronous FFI path to avoid blocking the calling Flutter isolate.
-    if key.starts_with("verified-download-url-") {
+    if key.starts_with("verified-download-url-") || key == "gprotech-procurar-atualizacao" {
         return SyncReturn("error:unsupported".to_owned());
     }
     SyncReturn(main_get_common(key))
