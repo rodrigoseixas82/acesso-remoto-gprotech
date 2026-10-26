@@ -55,6 +55,8 @@ jobs:
       GPROTECH_EDICAO: ${{ matrix.edicao.id }}
       GPROTECH_APP_NAME: ${{ matrix.edicao.app-name }}
       GPROTECH_DISPLAY_NAME: ${{ matrix.edicao.display-name }}
+      # Número do build (aparece no programa e decide se há versão nova no Release).
+      GPROTECH_BUILD: ${{ github.run_number }}
     steps:
       - name: Export GitHub Actions cache environment variables
         uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
@@ -194,7 +196,8 @@ jobs:
           python3 ./generate.py -f ../../rustdesk/ -o . -e "../../rustdesk/${GPROTECH_APP_NAME}.exe"
           popd
           mkdir -p ./out
-          mv ./target/release/rustdesk-portable-packer.exe "./out/${{ matrix.edicao.file-name }}-${VERSION}-x64.exe"
+          # Nome sem versão: o link fixo do Release (releases/latest/download/...) não muda.
+          mv ./target/release/rustdesk-portable-packer.exe "./out/${{ matrix.edicao.file-name }}.exe"
 
       - name: Upload executável único
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

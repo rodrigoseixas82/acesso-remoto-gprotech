@@ -626,6 +626,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildHelpCards(String updateUrl) {
+    // GPROTECH: versão nova publicada no Release (só no Cliente instalado).
+    // O botão baixa, confere a assinatura/SHA-256 e instala (pede permissão).
+    if (isWindows &&
+        updateUrl.isNotEmpty &&
+        gprotechAtualizacaoAtiva() &&
+        bind.mainIsInstalled()) {
+      return buildInstallCard(
+          "",
+          "Há uma versão nova deste programa. Clique em Atualizar para instalar.",
+          "Atualizar", () async {
+        await rustDeskWinManager.closeAllSubWindows();
+        handleUpdate(updateUrl);
+      });
+    }
     if (!bind.isCustomClient() &&
         updateUrl.isNotEmpty &&
         !isCardClosed &&

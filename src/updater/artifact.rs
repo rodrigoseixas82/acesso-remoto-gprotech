@@ -104,6 +104,12 @@ pub(super) fn verified_update_artifact_from_release_page_url(
     update_url: &str,
     query: &UpdateArtifactQuery<'_>,
 ) -> ResultType<VerifiedUpdateArtifact> {
+    // GPROTECH: atualização do Cliente vem do versao.json assinado do nosso Release.
+    #[cfg(windows)]
+    if crate::gprotech::atualizacao_ativa() {
+        let _ = (update_url, query);
+        return crate::gprotech::artefato_atualizacao();
+    }
     let release_id = release_id_from_update_url(update_url)?;
     let display_version = display_version_from_release_id(&release_id)?;
     let expected_artifact_url_prefix =
@@ -177,8 +183,16 @@ pub fn get_update_download_file_from_url(url: &str) -> Option<PathBuf> {
     let tag = segments.next()?;
     let filename = segments.next()?;
 
-    if owner != "rustdesk"
-        || repo != "rustdesk"
+    // GPROTECH: no Cliente, o arquivo vem do Release do nosso repositório.
+    #[cfg(windows)]
+    let repo_permitido = if crate::gprotech::atualizacao_ativa() {
+        owner == crate::gprotech::REPO_DONO && repo == crate::gprotech::REPO_NOME
+    } else {
+        owner == "rustdesk" && repo == "rustdesk"
+    };
+    #[cfg(not(windows))]
+    let repo_permitido = owner == "rustdesk" && repo == "rustdesk";
+    if !repo_permitido
         || releases != "releases"
         || download != "download"
         || tag.is_empty()

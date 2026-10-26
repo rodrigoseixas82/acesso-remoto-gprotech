@@ -1012,6 +1012,11 @@ pub fn is_modifier(evt: &KeyEvent) -> bool {
 
 pub fn check_software_update() {
     if is_custom_client() {
+        // GPROTECH: o Cliente confere o Release do nosso repositório (nunca o do RustDesk).
+        #[cfg(windows)]
+        if crate::gprotech::atualizacao_ativa() {
+            crate::gprotech::checar_atualizacao();
+        }
         return;
     }
     let opt = LocalConfig::get_option(keys::OPTION_ENABLE_CHECK_UPDATE);

@@ -1,0 +1,123 @@
+name: GPROTECH - Publicar Release
+
+# Publica um build já testado e aprovado como Release público, só com o Cliente.
+# Roda à mão (Actions > GPROTECH - Publicar Release > Run workflow), informando o
+# número do build. Gera o versao.json (build, link, tamanho e SHA-256 do .exe) e
+# o assina com a chave do secret GPROTECH_UPDATE_SIGNING_KEY; o Cliente instalado
+# só aceita versao.json com essa assinatura (chave pública em src/gprotech.rs).
+
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: "Número do build aprovado (ex.: 13)"
+        required: true
+      novidades:
+        description: "Novidades, separadas por ; (opcional)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  ARQUIVO: Suporte-Remoto-GPROTECH-Cliente.exe
+  ARTEFATO: Suporte-Remoto-GPROTECH-Cliente-windows-x64
+  # Deve ser a mesma chave pública embutida no programa (src/gprotech.rs).
+  CHAVE_PUBLICA: "XHyG+EoNGofqRyDoMi5+a0PRjO9+RAthozicoCD5hrE="
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BUILD: ${{ inputs.build }}
+      NOVIDADES: ${{ inputs.novidades }}
+    steps:
+      - name: Achar o build aprovado
+        run: |
+          set -euo pipefail
+          [[ "$BUILD" =~ ^[0-9]+$ ]] || { echo "::error::Build inválido: $BUILD"; exit 1; }
+          TAG="gprotech-b${BUILD}"
+          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::O Release $TAG já existe"; exit 1
+          fi
+          RUN_ID=$(gh run list -R "$GITHUB_REPOSITORY" -w "GPROTECH - Build Windows" -b gprotech \
+            -s success -L 200 --json number,databaseId \
+            -q ".[] | select(.number == ${BUILD}) | .databaseId")
+          [ -n "$RUN_ID" ] || { echo "::error::Build $BUILD não encontrado (ou não terminou com sucesso)"; exit 1; }
+          SHA=$(gh run view "$RUN_ID" -R "$GITHUB_REPOSITORY" --json headSha -q .headSha)
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+          echo "SHA=$SHA" >> "$GITHUB_ENV"
+          echo "Build $BUILD = run $RUN_ID, commit $SHA"
+
+      - name: Baixar o Cliente do build
+        run: |
+          set -euo pipefail
+          gh run download "$RUN_ID" -R "$GITHUB_REPOSITORY" -n "$ARTEFATO" -D out
+          [ -f "out/$ARQUIVO" ] || { echo "::error::out/$ARQUIVO não existe (builds antes do 13 têm outro nome)"; ls -la out; exit 1; }
+
+      - name: Gerar e assinar o versao.json
+        env:
+          CHAVE: ${{ secrets.GPROTECH_UPDATE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          [ -n "$CHAVE" ] || { echo "::error::Secret GPROTECH_UPDATE_SIGNING_KEY não cadastrado"; exit 1; }
+          node - <<'JS'
+          const c = require('crypto');
+          const fs = require('fs');
+          const env = process.env;
+          const seed = Buffer.from(env.CHAVE.trim(), 'base64');
+          if (seed.length !== 32) throw new Error('Chave privada inválida (esperado 32 bytes em base64)');
+          const priv = c.createPrivateKey({
+            key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), seed]),
+            format: 'der', type: 'pkcs8',
+          });
+          const pub = c.createPublicKey(priv).export({ format: 'der', type: 'spki' }).subarray(-32);
+          if (pub.toString('base64') !== env.CHAVE_PUBLICA) {
+            throw new Error('A chave do secret não corresponde à chave pública do programa');
+          }
+          const exe = fs.readFileSync(`out/${env.ARQUIVO}`);
+          const base = `https://github.com/${env.GITHUB_REPOSITORY}/releases`;
+          const versao = {
+            app: 'suporte-remoto-gprotech-cliente',
+            build: Number(env.BUILD),
+            data: new Date().toISOString().slice(0, 10),
+            commit: env.SHA,
+            pagina: `${base}/tag/${env.TAG}`,
+            url: `${base}/download/${env.TAG}/${env.ARQUIVO}`,
+            tamanho: exe.length,
+            sha256: c.createHash('sha256').update(exe).digest('hex'),
+          };
+          const json = Buffer.from(JSON.stringify(versao, null, 2) + '\n');
+          const assinado = Buffer.concat([Buffer.from('GPROTECH atualizacao v1\n'), json]);
+          const sig = c.sign(null, assinado, priv);
+          if (!c.verify(null, assinado, c.createPublicKey(priv), sig)) throw new Error('Falha ao conferir a assinatura');
+          fs.writeFileSync('out/versao.json', json);
+          fs.writeFileSync('out/versao.json.sig', sig.toString('base64') + '\n');
+          console.log(json.toString());
+          JS
+
+      - name: Publicar o Release
+        run: |
+          set -euo pipefail
+          {
+            echo "Suporte Remoto GPROTECH - Cliente, build ${BUILD}."
+            echo
+            if [ -n "$NOVIDADES" ]; then
+              echo "Novidades:"
+              echo "$NOVIDADES" | tr ';' '\n' | sed -e 's/^ *//' -e '/^$/d' -e 's/^/- /'
+              echo
+            fi
+            echo "Download: ${ARQUIVO} (instalar nos computadores das lojas)."
+            echo
+            echo "Os computadores com o Cliente instalado (build 13 ou mais novo) mostram o aviso \"Atualizar\" automaticamente."
+          } > notas.md
+          gh release create "$TAG" -R "$GITHUB_REPOSITORY" \
+            --target "$SHA" \
+            --title "Suporte Remoto GPROTECH - build ${BUILD}" \
+            --notes-file notas.md \
+            --latest \
+            "out/${ARQUIVO}" out/versao.json out/versao.json.sig

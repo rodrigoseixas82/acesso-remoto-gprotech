@@ -9,6 +9,7 @@
 //! - `GPROTECH_PRESET_PASSWORD_HASH` / `GPROTECH_PRESET_SALT`: senha interna da
 //!   GPROTECH, embutida só como hash ("00" + base64(sha256(senha + salt))).
 //!   Vêm de secrets do GitHub; o texto da senha nunca entra no código nem no binário.
+//! - `GPROTECH_BUILD`: número do build (run_number do workflow); 0 = build local.
 
 use hbb_common::config;
 
@@ -155,6 +156,12 @@ pub fn apply_defaults() {
         if let Some(name) = non_empty(option_env!("GPROTECH_DISPLAY_NAME")) {
             builtin.insert("gprotech-display-name".to_owned(), name.to_owned());
         }
+        if numero_build() > 0 {
+            builtin.insert("gprotech-build".to_owned(), numero_build().to_string());
+        }
+        if atualizacao_ativa() {
+            builtin.insert("gprotech-atualizacao".to_owned(), "Y".to_owned());
+        }
         if is_edicao_cliente() {
             if let Some(phone) = non_empty(option_env!("GPROTECH_WHATSAPP")) {
                 builtin.insert("gprotech-whatsapp".to_owned(), phone.to_owned());
@@ -171,6 +178,12 @@ pub fn apply_defaults() {
     if !is_edicao_cliente() {
         return;
     }
+
+    // Atualização só pelo cartão "Atualizar" (clique do usuário), nunca sozinha.
+    config::OVERWRITE_SETTINGS
+        .write()
+        .unwrap()
+        .insert("allow-auto-update".to_owned(), "N".to_owned());
 
     let mut hard = config::HARD_SETTINGS.write().unwrap();
     hard.insert("conn-type".to_owned(), "incoming".to_owned());
@@ -189,3 +202,177 @@ pub fn apply_defaults() {
         overwrite.insert("approve-mode".to_owned(), "password".to_owned());
     }
 }
+
+/// Número do build (run_number do workflow "GPROTECH - Build Windows"); 0 em build local.
+pub fn numero_build() -> u32 {
+    option_env!("GPROTECH_BUILD")
+        .and_then(|s| s.trim().parse().ok())
+        .unwrap_or(0)
+}
+
+/// Aviso de versão nova pelo Release do GitHub: só no Cliente (o Atendente é
+/// atualizado à mão, a partir do build) e só em build numerado.
+pub fn atualizacao_ativa() -> bool {
+    cfg!(windows) && is_edicao_cliente() && numero_build() > 0
+}
+
+/// Atualização pelo GitHub Releases. O workflow "GPROTECH - Publicar Release"
+/// publica o `.exe` do Cliente, o `versao.json` e o `versao.json.sig` (assinatura
+/// ed25519 com a chave do secret GPROTECH_UPDATE_SIGNING_KEY). O programa só
+/// aceita o `versao.json` assinado por essa chave, e o download é conferido pelo
+/// tamanho e SHA-256 que vêm nele.
+#[cfg(windows)]
+mod atualizacao {
+    use super::numero_build;
+    use hbb_common::{
+        anyhow::{anyhow, Context},
+        base64::{engine::general_purpose::STANDARD, Engine as _},
+        bail, log,
+        sodiumoxide::crypto::sign::{verify_detached, PublicKey, Signature},
+        ResultType,
+    };
+    use std::{
+        io::Read,
+        sync::atomic::{AtomicBool, Ordering},
+        time::Duration,
+    };
+
+    pub const REPO_DONO: &str = "rodrigoseixas82";
+    pub const REPO_NOME: &str = "acesso-remoto-gprotech";
+    const URL_VERSAO: &str = "https://github.com/rodrigoseixas82/acesso-remoto-gprotech/releases/latest/download/versao.json";
+    const URL_ASSINATURA: &str = "https://github.com/rodrigoseixas82/acesso-remoto-gprotech/releases/latest/download/versao.json.sig";
+    const PREFIXO_DOWNLOAD: &str = "https://github.com/rodrigoseixas82/acesso-remoto-gprotech/releases/download/";
+    const PREFIXO_PAGINA: &str = "https://github.com/rodrigoseixas82/acesso-remoto-gprotech/releases/tag/";
+    const APP: &str = "suporte-remoto-gprotech-cliente";
+    const CONTEXTO_ASSINATURA: &[u8] = b"GPROTECH atualizacao v1\n";
+    // Chave pública da GPROTECH (a privada fica só no secret do GitHub).
+    const CHAVE_PUBLICA: [u8; 32] = [
+        92, 124, 134, 248, 74, 13, 26, 135, 234, 71, 32, 232, 50, 46, 126, 107, 67, 209, 140,
+        239, 126, 68, 11, 97, 163, 56, 156, 160, 32, 249, 134, 177,
+    ];
+    const LIMITE_BYTES: u64 = 64 * 1024;
+    const INTERVALO: Duration = Duration::from_secs(6 * 60 * 60);
+
+    #[derive(serde_derive::Deserialize)]
+    struct VersaoPublicada {
+        app: String,
+        build: u32,
+        pagina: String,
+        url: String,
+        tamanho: u64,
+        sha256: String,
+    }
+
+    fn baixar(url: &str) -> ResultType<Vec<u8>> {
+        let client = crate::hbbs_http::create_http_client_with_url_strict(url)?;
+        let response = client.get(url).timeout(Duration::from_secs(30)).send()?;
+        if !response.status().is_success() {
+            bail!("HTTP {} em {}", response.status(), url);
+        }
+        let mut bytes = Vec::new();
+        response.take(LIMITE_BYTES + 1).read_to_end(&mut bytes)?;
+        if bytes.len() as u64 > LIMITE_BYTES {
+            bail!("arquivo grande demais: {}", url);
+        }
+        Ok(bytes)
+    }
+
+    fn conferir_assinatura(dados: &[u8], assinatura_b64: &[u8]) -> ResultType<()> {
+        let texto = std::str::from_utf8(assinatura_b64).context("assinatura inválida")?;
+        let bytes = STANDARD
+            .decode(texto.trim())
+            .context("assinatura não está em base64")?;
+        let bytes: [u8; 64] = bytes
+            .try_into()
+            .map_err(|_| anyhow!("assinatura com tamanho errado"))?;
+        let assinatura =
+            Signature::from_bytes(&bytes).map_err(|_| anyhow!("assinatura inválida"))?;
+        hbb_common::sodiumoxide::init().map_err(|_| anyhow!("falha ao iniciar sodiumoxide"))?;
+        let mut assinado = Vec::with_capacity(CONTEXTO_ASSINATURA.len() + dados.len());
+        assinado.extend_from_slice(CONTEXTO_ASSINATURA);
+        assinado.extend_from_slice(dados);
+        if !verify_detached(&assinatura, &assinado, &PublicKey(CHAVE_PUBLICA)) {
+            bail!("assinatura do versao.json não confere");
+        }
+        Ok(())
+    }
+
+    fn versao_publicada() -> ResultType<VersaoPublicada> {
+        let dados = baixar(URL_VERSAO)?;
+        let assinatura = baixar(URL_ASSINATURA)?;
+        conferir_assinatura(&dados, &assinatura)?;
+        let v: VersaoPublicada = serde_json::from_slice(&dados).context("versao.json inválido")?;
+        let sha256 = v.sha256.to_ascii_lowercase();
+        if v.app != APP
+            || !v.url.starts_with(PREFIXO_DOWNLOAD)
+            || !v.pagina.starts_with(PREFIXO_PAGINA)
+            || v.tamanho == 0
+            || sha256.len() != 64
+            || !sha256.bytes().all(|b| b.is_ascii_hexdigit())
+        {
+            bail!("versao.json com dados inesperados");
+        }
+        Ok(VersaoPublicada { sha256, ..v })
+    }
+
+    /// Página do Release com build mais novo que o instalado (ou vazio).
+    fn conferir() -> ResultType<String> {
+        let v = versao_publicada()?;
+        if v.build > numero_build() {
+            Ok(v.pagina)
+        } else {
+            Ok(String::new())
+        }
+    }
+
+    fn avisar(pagina: &str) {
+        *crate::common::SOFTWARE_UPDATE_URL.lock().unwrap() = pagina.to_owned();
+        #[cfg(feature = "flutter")]
+        if !pagina.is_empty() {
+            let data = serde_json::json!({
+                "name": "check_software_update_finish",
+                "url": pagina,
+            });
+            let _ = crate::flutter::push_global_event(
+                crate::flutter::APP_TYPE_MAIN,
+                data.to_string(),
+            );
+        }
+    }
+
+    /// Confere ao abrir e depois a cada 6 horas (o Cliente fica aberto na bandeja).
+    pub fn checar_atualizacao() {
+        static INICIADO: AtomicBool = AtomicBool::new(false);
+        if INICIADO.swap(true, Ordering::SeqCst) {
+            let pagina = crate::common::SOFTWARE_UPDATE_URL.lock().unwrap().clone();
+            avisar(&pagina);
+            return;
+        }
+        std::thread::spawn(|| loop {
+            match conferir() {
+                Ok(pagina) => avisar(&pagina),
+                Err(e) => log::warn!("GPROTECH: não foi possível conferir atualização: {e}"),
+            }
+            std::thread::sleep(INTERVALO);
+        });
+    }
+
+    /// Arquivo a baixar quando o usuário clica em "Atualizar" (confere de novo).
+    pub(crate) fn artefato_atualizacao() -> ResultType<crate::update_metadata::VerifiedUpdateArtifact> {
+        let v = versao_publicada()?;
+        if v.build <= numero_build() {
+            bail!("Não há versão nova.");
+        }
+        Ok(crate::update_metadata::VerifiedUpdateArtifact {
+            version: format!("build {}", v.build),
+            url: v.url,
+            size: v.tamanho,
+            sha256: v.sha256,
+        })
+    }
+}
+
+#[cfg(windows)]
+pub(crate) use atualizacao::artefato_atualizacao;
+#[cfg(windows)]
+pub use atualizacao::{checar_atualizacao, REPO_DONO, REPO_NOME};

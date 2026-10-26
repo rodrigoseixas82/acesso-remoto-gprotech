@@ -35,6 +35,7 @@ class OnlineStatusWidget extends StatefulWidget {
 class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
   final _svcStopped = Get.find<RxBool>(tag: 'stop-service');
   final _svcIsUsingPublicServer = true.obs;
+  final _gprotechBuild = bind.mainGetBuildinOption(key: 'gprotech-build');
   Timer? _updateTimer;
 
   double get em => 14.0;
@@ -134,6 +135,14 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
             // GPROTECH: sem o convite "configure seu próprio servidor";
             // fica só o indicador e o texto do status (ou do erro).
             // if (!isIncomingOnly) setupServerWidget(),
+            // GPROTECH: número do build, para saber qual versão está no PC.
+            if (_gprotechBuild.isNotEmpty) ...[
+              const Spacer(),
+              Text('Build $_gprotechBuild',
+                      style: const TextStyle(
+                          fontSize: 11, color: Color(0xFF8FA3C7)))
+                  .marginOnly(right: isIncomingOnly ? 8 : em),
+            ],
           ],
         );
 

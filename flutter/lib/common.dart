@@ -4075,9 +4075,13 @@ void earlyAssert() {
   assert('\1' == '1');
 }
 
+// GPROTECH: o Cliente confere o Release do repositório GPROTECH (ver gprotech.rs).
+bool gprotechAtualizacaoAtiva() =>
+    bind.mainGetBuildinOption(key: 'gprotech-atualizacao') == 'Y';
+
 void checkUpdate() {
   if (!isWeb) {
-    if (!bind.isCustomClient()) {
+    if (!bind.isCustomClient() || gprotechAtualizacaoAtiva()) {
       platformFFI.registerEventHandler(
           kCheckSoftwareUpdateFinish, kCheckSoftwareUpdateFinish,
           (Map<String, dynamic> evt) async {
