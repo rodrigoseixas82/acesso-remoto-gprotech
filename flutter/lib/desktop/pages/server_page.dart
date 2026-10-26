@@ -562,19 +562,24 @@ class _CmHeaderState extends State<_CmHeader>
                       client.authorized
                           ? client.disconnected
                               ? translate("Disconnected")
+                              // GPROTECH: "Conectado: 00:00:00", letra maior
                               : bind.isIncomingOnly()
-                                  ? 'Atendimento em andamento'
+                                  ? 'Conectado:'
                                   : translate("Connected")
                           : "${translate("Request access to your device")}...",
-                      style: TextStyle(color: Colors.white),
-                    ).marginOnly(right: 8.0),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: bind.isIncomingOnly() ? 14 : null),
+                    ).marginOnly(right: bind.isIncomingOnly() ? 5.0 : 8.0),
                     if (client.authorized)
                       Obx(
                         () => Text(
                           formatDurationToTime(
                             Duration(seconds: _time.value),
                           ),
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: bind.isIncomingOnly() ? 14 : null),
                         ),
                       )
                   ],

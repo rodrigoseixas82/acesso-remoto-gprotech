@@ -579,7 +579,8 @@ class ServerModel with ChangeNotifier {
       if (!hideCm) windowOnTop(null);
     });
     // Only do the hidden task when on Desktop.
-    if (client.authorized && isDesktop) {
+    // GPROTECH: no Cliente a janela do atendimento fica aberta (não minimiza)
+    if (client.authorized && isDesktop && !bind.isIncomingOnly()) {
       cmHiddenTimer = Timer(const Duration(seconds: 3), () {
         if (!hideCm) windowManager.minimize();
         cmHiddenTimer = null;

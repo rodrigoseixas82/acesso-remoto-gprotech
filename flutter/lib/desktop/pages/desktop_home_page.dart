@@ -102,13 +102,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           constraints: BoxConstraints(maxHeight: isIncomingOnly ? 48 : 52),
           child: loadLogo(),
         ),
-      ),
+      ).marginOnly(
+          top: isIncomingOnly ? 10 : 0, bottom: isIncomingOnly ? 10 : 0),
       buildTip(context),
       if (!isOutgoingOnly) buildGprotechIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
       if (isIncomingOnly) buildGprotechSupportButton(context),
-      if (!isIncomingOnly) buildGprotechNomeTecnico(context),
-      if (!isIncomingOnly) const GprotechFotoTecnico(),
       FutureBuilder<Widget>(
         future: Future.value(
             Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
@@ -139,7 +138,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               });
             }
           },
-        ).marginOnly(bottom: 6, right: 6)
+        ).marginOnly(bottom: 10, right: 6)
       ]);
     }
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
@@ -153,14 +152,42 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           children: [
             Column(
               children: [
-                SingleChildScrollView(
-                  controller: _leftPaneScrollController,
-                  child: Column(
-                    key: _childKey,
-                    children: children,
+                if (isIncomingOnly)
+                  SingleChildScrollView(
+                    controller: _leftPaneScrollController,
+                    // GPROTECH: reajusta a altura da janela sempre que o
+                    // conteúdo muda (ex.: a senha some depois de carregar),
+                    // para não sobrar área vazia embaixo de "Pronto".
+                    child: NotificationListener<SizeChangedLayoutNotification>(
+                      onNotification: (_) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (isInHomePage()) _updateWindowSize();
+                        });
+                        return true;
+                      },
+                      child: SizeChangedLayoutNotifier(
+                        child: Column(
+                          key: _childKey,
+                          children: children,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                Expanded(child: Container())
+                if (isIncomingOnly) Expanded(child: Container()),
+                // GPROTECH: no Atendente, a parte de cima rola e o cartão
+                // "Seu perfil" fica sempre no rodapé da barra lateral.
+                if (!isIncomingOnly)
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: _leftPaneScrollController,
+                      child: Column(
+                        key: _childKey,
+                        children: children,
+                      ),
+                    ),
+                  ),
+                if (!isIncomingOnly && !isOutgoingOnly)
+                  buildGprotechPerfil(context),
               ],
             ),
             if (isOutgoingOnly)
@@ -213,7 +240,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     }
 
     return Container(
-      margin: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 6),
+      margin: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: isIncomingOnly ? 12 : 10,
+          bottom: isIncomingOnly ? 7 : 6),
       padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
       decoration: BoxDecoration(
           color: _kGpCard, borderRadius: BorderRadius.circular(10)),
@@ -468,20 +499,45 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
-  // GPROTECH: campo "Seu nome"; o cliente vê esse nome durante o atendimento.
-  Widget buildGprotechNomeTecnico(BuildContext context) {
+  // GPROTECH: cartão "Seu perfil" (nome e foto que o cliente vê durante o
+  // atendimento), fixo no rodapé da barra lateral do Atendente.
+  Widget buildGprotechPerfil(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 8),
-      child: TextField(
-        controller: _gprotechNomeController,
-        maxLength: 40,
-        decoration: const InputDecoration(
-          labelText: 'Seu nome',
-          helperText: 'Aparece para o cliente',
-          counterText: '',
-        ),
-        onChanged: (v) => bind.mainSetLocalOption(
-            key: 'gprotech-nome-tecnico', value: v.trim()),
+      margin: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: _kGpCard,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF1D3F66)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Seu nome',
+              style: TextStyle(fontSize: 11, color: _kGpMuted)),
+          const SizedBox(height: 4),
+          TextField(
+            controller: _gprotechNomeController,
+            maxLength: 40,
+            style: const TextStyle(fontSize: 13),
+            decoration: const InputDecoration(
+              counterText: '',
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+            ),
+            onChanged: (v) => bind.mainSetLocalOption(
+                key: 'gprotech-nome-tecnico', value: v.trim()),
+          ),
+          const SizedBox(height: 10),
+          const Text('Sua foto',
+              style: TextStyle(fontSize: 11, color: _kGpMuted)),
+          const SizedBox(height: 6),
+          const GprotechFotoTecnico(),
+          const SizedBox(height: 8),
+          const Text('Nome e foto aparecem para o cliente',
+              style: TextStyle(fontSize: 11, color: _kGpMuted)),
+        ],
       ),
     );
   }
@@ -494,7 +550,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     }
     return Container(
       // GPROTECH: botão maior, com o logo do WhatsApp, para chamar a atenção
-      margin: const EdgeInsets.only(left: 12, right: 12, top: 8, bottom: 6),
+      margin: const EdgeInsets.only(left: 12, right: 12, top: 7, bottom: 7),
       width: double.infinity,
       height: 46,
       child: ElevatedButton.icon(
@@ -522,7 +578,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final isOutgoingOnly = bind.isOutgoingOnly();
     return Padding(
       padding:
-          const EdgeInsets.only(left: 16.0, right: 16, top: 12.0, bottom: 2),
+          EdgeInsets.only(
+              left: 16.0,
+              right: 16,
+              top: bind.isIncomingOnly() ? 8.0 : 12.0,
+              bottom: bind.isIncomingOnly() ? 6 : 2),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -533,7 +593,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    translate("Your Desktop"),
+                    // GPROTECH: no Cliente só "Suporte Remoto" (a marca já está no logo)
+                    bind.isIncomingOnly()
+                        ? 'Suporte Remoto'
+                        : translate("Your Desktop"),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
@@ -546,7 +609,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             Text(
               // GPROTECH: texto próprio no Atendente
               bind.isIncomingOnly()
-                  ? translate("desk_tip")
+                  ? 'Informe o ID abaixo para que o técnico consiga acessar o seu computador e iniciar o atendimento.'
                   : 'Seu computador também pode ser acessado através do número e da senha abaixo.',
               overflow: TextOverflow.clip,
               style: Theme.of(context).textTheme.bodySmall,
@@ -750,8 +813,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       children: [
         Container(
           // GPROTECH: cartão arredondado com margem, como no layout
-          margin: EdgeInsets.fromLTRB(16, marginTop > 10 ? 10 : marginTop, 16,
-              bind.isIncomingOnly() ? 10 : 12),
+          margin: EdgeInsets.fromLTRB(
+              16,
+              bind.isIncomingOnly() ? 7 : (marginTop > 10 ? 10 : marginTop),
+              16,
+              bind.isIncomingOnly() ? 14 : 12),
           child: Container(
               decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),

@@ -16,8 +16,11 @@ import '../models/platform_model.dart';
 /// Igual a OPTION_FOTO_TECNICO em src/gprotech.rs
 const kGprotechOpcaoFoto = 'gprotech-foto-tecnico';
 const _kLado = 160;
-const _kCard = Color(0xFF002244);
+const _kFundo = Color(0xFF001324);
+const _kBorda = Color(0xFF0A2A4A);
 const _kMuted = Color(0xFF8FA3C7);
+const _kTexto = Color(0xFFCAD7FF);
+const _kVermelho = Color(0xFFE57373);
 
 class GprotechFotoTecnico extends StatefulWidget {
   const GprotechFotoTecnico({Key? key}) : super(key: key);
@@ -79,57 +82,80 @@ class _GprotechFotoTecnicoState extends State<GprotechFotoTecnico> {
     });
   }
 
+  Widget _botao(IconData icon, String dica, Color cor, VoidCallback onTap) {
+    return Tooltip(
+      message: dica,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(7),
+        child: Container(
+          width: 30,
+          height: 30,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: _kFundo,
+            borderRadius: BorderRadius.circular(7),
+            border: Border.all(color: _kBorda),
+          ),
+          child: Icon(icon, size: 16, color: cor),
+        ),
+      ),
+    );
+  }
+
+  // Foto (clicável para trocar) com lápis e lixeira ao lado; sem foto, um
+  // quadro com câmera e só o botão de escolher.
   @override
   Widget build(BuildContext context) {
     final bytes = _bytes;
-    return Container(
-      margin: const EdgeInsets.only(left: 16, right: 16, top: 2, bottom: 8),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: SizedBox(
-              width: 56,
-              height: 56,
-              child: bytes != null
-                  ? Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true)
-                  : Container(
-                      color: _kCard,
-                      child: const Icon(Icons.person_outline,
-                          color: _kMuted, size: 30),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Sua foto',
-                    style: TextStyle(fontSize: 12, color: _kMuted)),
-                Wrap(
-                  spacing: 4,
-                  children: [
-                    TextButton(
-                      onPressed: _escolher,
-                      child: Text(bytes == null ? 'Escolher' : 'Trocar'),
-                    ),
-                    if (bytes != null)
-                      TextButton(
-                        onPressed: _remover,
-                        child: const Text('Remover'),
-                      ),
-                  ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Tooltip(
+              message: bytes == null ? 'Escolher foto' : 'Trocar foto',
+              child: InkWell(
+                onTap: _escolher,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    color: _kFundo,
+                    borderRadius: BorderRadius.circular(10),
+                    border:
+                        bytes == null ? Border.all(color: _kMuted) : null,
+                  ),
+                  child: bytes != null
+                      ? Image.memory(bytes,
+                          fit: BoxFit.cover, gaplessPlayback: true)
+                      : const Icon(Icons.add_a_photo_outlined,
+                          color: _kMuted, size: 22),
                 ),
-                if (_erro != null)
-                  Text(_erro!,
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFFE57373))),
-              ],
+              ),
             ),
+            const SizedBox(width: 10),
+            if (bytes == null)
+              _botao(Icons.upload_outlined, 'Escolher foto', _kTexto,
+                  _escolher)
+            else ...[
+              _botao(Icons.edit_outlined, 'Trocar foto', _kTexto, _escolher),
+              const SizedBox(width: 6),
+              _botao(
+                  Icons.delete_outline, 'Remover foto', _kVermelho, _remover),
+            ],
+          ],
+        ),
+        if (_erro != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(_erro!,
+                style: const TextStyle(fontSize: 11, color: _kVermelho)),
           ),
-        ],
-      ),
+      ],
     );
   }
 }
