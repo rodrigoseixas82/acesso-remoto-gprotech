@@ -133,6 +133,26 @@ pub(super) fn get_displays_rect() -> ResultType<(i32, i32, u32, u32)> {
     Ok((x, y, w, h))
 }
 
+/// GPROTECH: retângulo (x, y, largura, altura) de cada monitor.
+#[cfg(target_os = "windows")]
+pub(super) fn get_displays_list() -> Vec<(i32, i32, u32, u32)> {
+    crate::server::display_service::try_get_displays()
+        .map(|displays| {
+            displays
+                .iter()
+                .map(|d| {
+                    (
+                        d.origin().0 as i32,
+                        d.origin().1 as i32,
+                        d.width() as u32,
+                        d.height() as u32,
+                    )
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 #[inline]
 pub(super) fn argb_to_rgba(argb: u32) -> (u8, u8, u8, u8) {
     (

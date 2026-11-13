@@ -2074,6 +2074,13 @@ pub fn session_get_audit_server_sync(session_id: SessionID, typ: String) -> Sync
     SyncReturn(res)
 }
 
+/// GPROTECH: caneta de anotação. `json` no formato de `gprotech::mensagem_anotacao`.
+pub fn session_send_gprotech_anotacao(session_id: SessionID, json: String) {
+    if let Some(session) = sessions::get_session_by_session_id(&session_id) {
+        session.send_gprotech_anotacao(json);
+    }
+}
+
 pub fn session_send_note(session_id: SessionID, note: String) {
     if let Some(session) = sessions::get_session_by_session_id(&session_id) {
         session.send_note(note)

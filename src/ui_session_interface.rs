@@ -780,6 +780,13 @@ impl<T: InvokeUiSession> Session<T> {
         self.send(Data::Message(msg_out));
     }
 
+    /// GPROTECH: manda um pedaço de anotação (caneta) para o cliente.
+    pub fn send_gprotech_anotacao(&self, json: String) {
+        if let Some(msg_out) = crate::gprotech::mensagem_anotacao(&json) {
+            self.send(Data::Message(msg_out));
+        }
+    }
+
     pub fn send_chat(&self, text: String) {
         let mut misc = Misc::new();
         misc.set_chat_message(ChatMessage {

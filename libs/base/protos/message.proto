@@ -997,6 +997,28 @@ message PortForwardChannel {
   }
 }
 
+// GPROTECH: anotação do técnico desenhada por cima da tela do cliente (caneta).
+// Coordenadas na mesma escala dos eventos de mouse (tela remota, pixels absolutos).
+message GprotechAnotacao {
+  enum Acao {
+    Traco = 0;    // cria ou continua o traço `id`
+    Desfazer = 1; // apaga o último traço
+    Limpar = 2;   // apaga todos os traços
+    Ligar = 3;    // caneta ligada: prepara a camada transparente no cliente
+    Desligar = 4; // caneta desligada: apaga tudo e fecha a camada
+  }
+  Acao acao = 1;
+  uint32 id = 2;
+  uint32 ferramenta = 3; // 0 livre, 1 seta, 2 retângulo, 3 círculo
+  uint32 argb = 4;
+  uint32 espessura = 5;
+  bool sumir = 6;        // o traço some 5 s depois de terminado
+  bool fim = 7;          // o traço terminou
+  // x0, y0, x1, y1... Caneta livre: pontos novos, somados aos anteriores.
+  // Seta, retângulo e círculo: início e fim, substituindo os anteriores.
+  repeated sint32 pontos = 8;
+}
+
 message Message {
   oneof union {
     SignedId signed_id = 3;
@@ -1032,5 +1054,7 @@ message Message {
     PortForwardChannel port_forward_channel = 33;
     // Auto Login: the peer types the password only if it is at its logon or lock screen.
     OSLogin os_login = 34;
+    // GPROTECH: número alto para não colidir com campos novos do RustDesk.
+    GprotechAnotacao gprotech_anotacao = 1000;
   }
 }

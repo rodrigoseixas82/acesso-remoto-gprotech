@@ -20,6 +20,7 @@ import '../../models/platform_model.dart';
 import '../../models/shortcut_model.dart';
 import '../../common/shared_state.dart';
 import '../../utils/image.dart';
+import '../../gprotech/anotacao.dart';
 import '../widgets/remote_toolbar.dart';
 import '../widgets/kb_layout_type_chooser.dart';
 import '../widgets/tabbar_widget.dart';
@@ -650,6 +651,7 @@ class _RemotePageState extends State<RemotePage>
   @override
   Future<void> dispose() async {
     final closeSession = closeSessionOnDispose.remove(widget.id) ?? true;
+    GpAnotacao.descartar(_ffi);
 
     // https://github.com/flutter/flutter/issues/64935
     if (isMacOS) {
@@ -757,6 +759,9 @@ class _RemotePageState extends State<RemotePage>
                   },
                   inputModel: _ffi.inputModel,
                   child: getBodyForDesktop(context))),
+          // GPROTECH: caneta de anotação (por cima da tela remota).
+          if (_ffi.connType == ConnType.defaultConn)
+            GpAnotacaoCamada(ffi: _ffi),
           Stack(
             children: [
               _ffi.ffiModel.pi.isSet.isTrue &&

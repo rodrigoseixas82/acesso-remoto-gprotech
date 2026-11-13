@@ -18,6 +18,7 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:window_size/window_size.dart' as window_size;
 
 import '../../common.dart';
+import '../../gprotech/anotacao.dart';
 import '../../models/model.dart';
 import '../../models/platform_model.dart';
 import '../../common/shared_state.dart';
@@ -847,6 +848,10 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       toolbarItems.add(_KeyboardMenu(id: widget.id, ffi: widget.ffi));
     }
     toolbarItems.add(_ChatMenu(id: widget.id, ffi: widget.ffi));
+    // GPROTECH: caneta de anotação.
+    if (!isWeb && widget.ffi.connType == ConnType.defaultConn) {
+      toolbarItems.add(_GpCanetaMenu(ffi: widget.ffi));
+    }
     if (!isWeb) {
       toolbarItems.add(_VoiceCallMenu(id: widget.id, ffi: widget.ffi));
     }
@@ -3018,6 +3023,38 @@ class _CloseMenu extends StatelessWidget {
       },
       color: _ToolbarTheme.redColor,
       hoverColor: _ToolbarTheme.hoverRedColor,
+    );
+  }
+}
+
+/// GPROTECH: liga e desliga a caneta de anotação (ver gprotech/anotacao.dart).
+class _GpCanetaMenu extends StatelessWidget {
+  final FFI ffi;
+  const _GpCanetaMenu({Key? key, required this.ffi}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final caneta = GpAnotacao.de(ffi);
+    return AnimatedBuilder(
+      animation: caneta,
+      builder: (context, _) => _IconMenuButton(
+        icon: SizedBox(
+          width: _ToolbarTheme.buttonSize,
+          height: _ToolbarTheme.buttonSize,
+          child: Center(
+            child: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: caneta.ligada ? const Color(0xFF001A41) : Colors.white,
+            ),
+          ),
+        ),
+        tooltip: caneta.ligada ? 'Desligar a caneta' : 'Caneta',
+        onPressed: caneta.alternar,
+        color: caneta.ligada ? const Color(0xFF37FFFF) : _ToolbarTheme.blueColor,
+        hoverColor:
+            caneta.ligada ? const Color(0xFF8CFFFF) : _ToolbarTheme.hoverBlueColor,
+      ),
     );
   }
 }

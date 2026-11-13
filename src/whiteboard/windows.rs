@@ -33,8 +33,12 @@ pub(super) fn create_event_loop() -> ResultType<()> {
         .with_decorations(false);
 
     let mut final_size = None;
+    // GPROTECH: canto da camada nas coordenadas da tela, e os monitores (caneta).
+    let mut origem = (0.0f32, 0.0f32);
+    let telas = super::server::get_displays_list();
     if let Ok((x, y, w, h)) = super::server::get_displays_rect() {
         if w > 0 && h > 0 {
+            origem = (x as f32, y as f32);
             final_size = Some(PhysicalSize::new(w, h));
             window_builder = window_builder
                 .with_position(PhysicalPosition::new(x, y))
@@ -71,6 +75,7 @@ pub(super) fn create_event_loop() -> ResultType<()> {
 
     let mut ripples: Vec<Ripple> = Vec::new();
     let mut last_cursors: HashMap<String, Cursor> = HashMap::new();
+    let mut anotacoes = super::anotacao::Anotacoes::default();
     let mut resized = final_size.is_none();
 
     event_loop.run(move |event, _, control_flow| {
@@ -200,6 +205,14 @@ pub(super) fn create_event_loop() -> ResultType<()> {
                     }
                 }
 
+                anotacoes.desenhar(
+                    &mut pixmap,
+                    origem,
+                    window.scale_factor() as f32,
+                    face.as_ref(),
+                    &telas,
+                );
+
                 if let Err(e) = buffer.present() {
                     log::error!("Failed to present surface: {}", e);
                     return;
@@ -219,10 +232,15 @@ pub(super) fn create_event_loop() -> ResultType<()> {
                     }
                     last_cursors.insert(k, cursor);
                 }
+                CustomEvent::Anotacao(anotacao) => {
+                    anotacoes.aplicar(k, anotacao);
+                }
+                CustomEvent::Clear => {
+                    anotacoes.limpar(&k);
+                }
                 CustomEvent::Exit => {
                     *control_flow = ControlFlow::Exit;
                 }
-                _ => {}
             },
             _ => (),
         }

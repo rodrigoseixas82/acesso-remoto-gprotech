@@ -1383,6 +1383,12 @@ class RustdeskImpl {
     return js.context.callMethod('getByName', ['audit_server', typ]);
   }
 
+  // GPROTECH: caneta de anotação (não existe na versão web).
+  Future<void> sessionSendGprotechAnotacao(
+      {required UuidValue sessionId, required String json, dynamic hint}) {
+    return Future.value();
+  }
+
   Future<void> sessionSendNote(
       {required UuidValue sessionId, required String note, dynamic hint}) {
     return Future(

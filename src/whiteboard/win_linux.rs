@@ -1,5 +1,5 @@
 use hbb_common::{bail, ResultType};
-use tiny_skia::{FillRule, Paint, PathBuilder, PixmapMut, Point, Rect, Transform};
+use tiny_skia::{FillRule, Paint, Path, PathBuilder, PixmapMut, Point, Rect, Transform};
 use ttf_parser::Face;
 // A helper struct to bridge `ttf-parser` and `tiny-skia`.
 struct PathBuilderWrapper<'a> {
@@ -152,6 +152,40 @@ pub(super) fn draw_text(
             pixmap.fill_path(&path, paint, FillRule::Winding, Transform::identity(), None);
         }
     }
+}
+
+/// GPROTECH: largura do texto, em pixels, no tamanho de fonte dado.
+#[allow(dead_code)]
+pub(super) fn largura_texto(face: &Face, text: &str, font_size: f32) -> f32 {
+    let scale = font_size / face.units_per_em() as f32;
+    text.chars()
+        .map(|ch| {
+            let glyph_id = face.glyph_index(ch).unwrap_or_default();
+            face.glyph_hor_advance(glyph_id).unwrap_or(0) as f32 * scale
+        })
+        .sum()
+}
+
+/// GPROTECH: contorno do texto com a linha de base em (x, y), para pintar
+/// com a cor que quiser (o `draw_text` sempre põe fundo branco).
+#[allow(dead_code)]
+pub(super) fn caminho_texto(face: &Face, text: &str, x: f32, y: f32, font_size: f32) -> Option<Path> {
+    let scale = font_size / face.units_per_em() as f32;
+    let transform = Transform::from_translate(x, y).pre_scale(scale, -scale);
+    let mut path_builder = PathBuilder::new();
+    let mut current_x = 0.0;
+    for ch in text.chars() {
+        let glyph_id = face.glyph_index(ch).unwrap_or_default();
+        let mut builder = PathBuilderWrapper {
+            path_builder: &mut path_builder,
+            transform: transform.post_translate(current_x, 0.0),
+        };
+        face.outline_glyph(glyph_id, &mut builder);
+        if let Some(h_advance) = face.glyph_hor_advance(glyph_id) {
+            current_x += h_advance as f32 * scale;
+        }
+    }
+    path_builder.finish()
 }
 
 pub(super) fn create_font_face() -> ResultType<Face<'static>> {

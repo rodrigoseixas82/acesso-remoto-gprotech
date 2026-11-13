@@ -39,6 +39,12 @@ pub fn get_key_cursor(conn_id: i32) -> String {
     format!("{}-cursor", conn_id)
 }
 
+/// GPROTECH: chave da camada de anotação (caneta) de uma conexão.
+#[inline]
+pub fn get_key_anotacao(conn_id: i32) -> String {
+    format!("{}-anotacao", conn_id)
+}
+
 pub fn register_whiteboard(k: String) {
     std::thread::spawn(|| {
         allow_err!(start_whiteboard_());

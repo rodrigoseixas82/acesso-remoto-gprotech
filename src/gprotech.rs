@@ -409,3 +409,41 @@ mod atualizacao {
 pub(crate) use atualizacao::artefato_atualizacao;
 #[cfg(windows)]
 pub use atualizacao::{checar_atualizacao, procurar_agora, REPO_DONO, REPO_NOME};
+
+/// Caneta de anotação: monta a mensagem para o cliente a partir do JSON que o
+/// Atendente manda: `{acao, id, ferramenta, argb, espessura, sumir, fim, pontos}`,
+/// com `pontos` = [x0, y0, x1, y1, ...] nas coordenadas da tela remota.
+pub fn mensagem_anotacao(json: &str) -> Option<base::message_proto::Message> {
+    use base::message_proto::{gprotech_anotacao::Acao, GprotechAnotacao, Message};
+    let v: serde_json::Value = serde_json::from_str(json).ok()?;
+    let numero = |chave: &str| v.get(chave).and_then(|x| x.as_f64()).unwrap_or(0.0);
+    let logico = |chave: &str| v.get(chave).and_then(|x| x.as_bool()).unwrap_or(false);
+    let mut anotacao = GprotechAnotacao::new();
+    anotacao.acao = match numero("acao") as i64 {
+        1 => Acao::Desfazer,
+        2 => Acao::Limpar,
+        3 => Acao::Ligar,
+        4 => Acao::Desligar,
+        _ => Acao::Traco,
+    }
+    .into();
+    anotacao.id = numero("id") as u32;
+    anotacao.ferramenta = numero("ferramenta") as u32;
+    anotacao.argb = numero("argb") as u32;
+    anotacao.espessura = numero("espessura") as u32;
+    anotacao.sumir = logico("sumir");
+    anotacao.fim = logico("fim");
+    anotacao.pontos = v
+        .get("pontos")
+        .and_then(|p| p.as_array())
+        .map(|p| {
+            p.iter()
+                .filter_map(|x| x.as_f64())
+                .map(|x| x.round() as i32)
+                .collect()
+        })
+        .unwrap_or_default();
+    let mut msg = Message::new();
+    msg.set_gprotech_anotacao(anotacao);
+    Some(msg)
+}

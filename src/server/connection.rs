@@ -394,6 +394,9 @@ pub struct Connection {
     // by peer
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     show_my_cursor: bool,
+    // GPROTECH: caneta do técnico. None = ainda não usada; Some(false) = sem suporte.
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    gprotech_anotacao: Option<bool>,
     // by peer
     disable_clipboard: bool,
     // by peer
@@ -612,6 +615,8 @@ impl Connection {
             disable_keyboard: false,
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
             show_my_cursor: false,
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            gprotech_anotacao: None,
             tx_input,
             video_ack_required: false,
             server_audit_conn: "".to_owned(),
@@ -4094,6 +4099,10 @@ impl Connection {
                 Some(message::Union::VoiceCallResponse(_response)) => {
                     // TODO: Maybe we can do a voice call from cm directly.
                 }
+                #[cfg(not(any(target_os = "android", target_os = "ios")))]
+                Some(message::Union::GprotechAnotacao(anotacao)) => {
+                    self.gprotech_anotacao(anotacao).await;
+                }
                 Some(message::Union::ScreenshotRequest(request)) => {
                     // GPROTECH: pedido de miniatura -> papel de parede, não print da tela
                     if request.display == crate::gprotech::DISPLAY_MINIATURA {
@@ -6143,6 +6152,63 @@ impl Connection {
         option.enum_value() == Ok(BoolOption::NotSet)
     }
 
+    /// GPROTECH: anotação do técnico (caneta), desenhada na camada transparente
+    /// por cima da tela, a mesma do "Mostrar meu cursor".
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    async fn gprotech_anotacao(&mut self, anotacao: base::message_proto::GprotechAnotacao) {
+        use crate::whiteboard;
+        let key = whiteboard::get_key_anotacao(self.inner.id);
+        if self.gprotech_anotacao.is_none() {
+            #[cfg(target_os = "windows")]
+            let suportado = crate::platform::windows::is_win_10_or_greater();
+            #[cfg(not(target_os = "windows"))]
+            let suportado = false;
+            if suportado {
+                whiteboard::register_whiteboard(key.clone());
+            } else {
+                let mut msg_out = Message::new();
+                let res = MessageBox {
+                    msgtype: "nook-nocancel-hasclose".to_owned(),
+                    title: "Caneta".to_owned(),
+                    text: "A caneta precisa do Windows 10 ou mais novo no computador do cliente."
+                        .to_owned(),
+                    link: "".to_owned(),
+                    ..Default::default()
+                };
+                msg_out.set_message_box(res);
+                self.send(msg_out).await;
+            }
+            self.gprotech_anotacao = Some(suportado);
+        }
+        if self.gprotech_anotacao != Some(true) {
+            return;
+        }
+        let acao = anotacao.acao.value();
+        // 3 = Ligar: só prepara a camada (feito acima).
+        if acao == 3 {
+            return;
+        }
+        let pontos = anotacao
+            .pontos
+            .chunks_exact(2)
+            .map(|c| (c[0] as f32, c[1] as f32))
+            .collect();
+        whiteboard::update_whiteboard(
+            key,
+            whiteboard::CustomEvent::Anotacao(whiteboard::Anotacao {
+                acao,
+                id: anotacao.id,
+                ferramenta: anotacao.ferramenta,
+                argb: anotacao.argb,
+                espessura: anotacao.espessura,
+                sumir: anotacao.sumir,
+                fim: anotacao.fim,
+                pontos,
+                nome: self.lr.my_name.clone(),
+            }),
+        );
+    }
+
     fn message_family(msg: &Message) -> &'static str {
         match msg.union.as_ref() {
             Some(message::Union::MouseEvent(_)) => "mouse_event",
@@ -7071,6 +7137,7 @@ mod raii {
             {
                 use crate::whiteboard;
                 whiteboard::unregister_whiteboard(whiteboard::get_key_cursor(self.0));
+                whiteboard::unregister_whiteboard(whiteboard::get_key_anotacao(self.0));
             }
         }
     }
