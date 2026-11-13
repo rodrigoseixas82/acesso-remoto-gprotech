@@ -542,10 +542,15 @@ impl Connection {
         let _raii_id = raii::ConnectionID::new(id);
         let _raii_control_permissions_id =
             raii::ControlPermissionsID::new(id, &control_permissions);
-        let salt = Config::get_effective_permanent_password_salt();
+        // GPROTECH: na senha por assinatura o salt leva "gp1:<salt>:<nº da troca>" (o
+        // Atendente reconhece e assina) e o desafio é mais longo, porque a assinatura
+        // gravada de uma conexão não pode servir em outra.
+        let salt_gprotech = crate::gprotech::chave_acesso::salt_para_login();
+        let challenge = Config::get_auto_password(if salt_gprotech.is_some() { 32 } else { 6 });
+        let salt = salt_gprotech.unwrap_or_else(Config::get_effective_permanent_password_salt);
         let hash = Hash {
             salt,
-            challenge: Config::get_auto_password(6),
+            challenge,
             ..Default::default()
         };
         let (tx_from_cm_holder, mut rx_from_cm) = mpsc::unbounded_channel::<ipc::Data>();
@@ -1903,6 +1908,13 @@ impl Connection {
         }
         self.authorized = true;
         self.unauthorized_id = None;
+        // GPROTECH: registra o acesso na área admin (em andamento e recentes).
+        crate::gprotech::eventos::inicio(
+            self.inner.id(),
+            &self.lr.my_name,
+            &self.lr.my_id,
+            &self.ip,
+        );
         // One-time means gone once it has let a peer in, not once that peer
         // leaves. This session's later logins come in on the password the
         // session remembers, so they are not affected.
@@ -2604,6 +2616,20 @@ impl Connection {
     }
 
     fn validate_password(&mut self, allow_permanent_password: bool) -> bool {
+        // GPROTECH: Cliente com a senha por assinatura aceita só a assinatura do
+        // Atendente (sem senha de uso único nem senha interna embutida).
+        if crate::gprotech::chave_acesso::ativo() {
+            let ok = crate::gprotech::chave_acesso::conferir_login(
+                &Config::get_id(),
+                &self.hash.salt,
+                &self.hash.challenge,
+                &self.lr.password,
+            );
+            if ok {
+                self.set_conn_audit_primary_auth(ConnAuditPrimaryAuth::PermanentPassword);
+            }
+            return ok;
+        }
         if password::temporary_enabled() {
             let password = password::temporary_password();
             if self.validate_password_plain(&password) {
@@ -5304,6 +5330,7 @@ impl Connection {
             return;
         }
         self.closed = true;
+        crate::gprotech::eventos::fim(self.inner.id());
         // If voice A,B -> C, and A,B has voice call
         // B disconnects, C will reset the voice call input.
         //
@@ -6790,6 +6817,8 @@ impl Default for PortableState {
 
 impl Drop for Connection {
     fn drop(&mut self) {
+        // GPROTECH: fim do acesso na área admin (se o on_close não rodou).
+        crate::gprotech::eventos::fim(self.inner.id());
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         self.release_pressed_modifiers();
 

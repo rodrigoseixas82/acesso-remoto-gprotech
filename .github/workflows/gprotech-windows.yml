@@ -27,6 +27,10 @@ env:
   # Senha interna da GPROTECH, só como hash (ver docs/04-senha-interna.md no projeto).
   GPROTECH_PRESET_PASSWORD_HASH: ${{ secrets.GPROTECH_PRESET_PASSWORD_HASH }}
   GPROTECH_PRESET_SALT: ${{ secrets.GPROTECH_PRESET_SALT }}
+  # Senha dos técnicos por assinatura: chave pública da frase mestra (área admin,
+  # aba Configuração). Com ela, o Cliente não leva o hash da senha interna e só aceita
+  # a assinatura do Atendente; a senha é trocada pela área admin, sem build novo.
+  GPROTECH_CHAVE_MESTRA: ${{ vars.GPROTECH_CHAVE_MESTRA }}
 
 jobs:
   generate-bridge:
@@ -166,7 +170,9 @@ jobs:
         run: |
           grep -c "${GPROTECH_SERVER}" ./rustdesk/librustdesk.dll
           grep -c "${GPROTECH_PUB_KEY}" ./rustdesk/librustdesk.dll
-          if [ -n "${GPROTECH_PRESET_PASSWORD_HASH}" ]; then
+          if [ -n "${GPROTECH_CHAVE_MESTRA}" ]; then
+            echo "Senha por assinatura: chave mestra ${GPROTECH_CHAVE_MESTRA} (hash da senha interna fora do Cliente)"
+          elif [ -n "${GPROTECH_PRESET_PASSWORD_HASH}" ]; then
             echo "Senha interna: hash configurado (secret presente)"
           else
             echo "::warning::Secret GPROTECH_PRESET_PASSWORD_HASH ausente: build sem senha interna"

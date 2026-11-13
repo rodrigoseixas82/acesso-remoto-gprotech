@@ -4688,6 +4688,10 @@ pub async fn handle_hash(
             return false;
         }
     }
+    // GPROTECH: loja com a senha por assinatura (salt "gp1:..."). Loja antiga segue abaixo.
+    if let Some(salt_gp) = crate::gprotech::chave_acesso::salt_do_login(&hash.salt) {
+        return handle_hash_gprotech(lc, password_preset, hash, salt_gp, interface, peer).await;
+    }
     // last password
     let mut password = lc.read().unwrap().password.clone();
     // preset password
@@ -4768,6 +4772,56 @@ pub async fn handle_hash(
     true
 }
 
+/// GPROTECH: ID da loja exatamente como vai no `username` do login.
+fn id_da_loja(lc: &Arc<RwLock<LoginConfigHandler>>) -> String {
+    let lc = lc.read().unwrap();
+    match lc.other_server.as_ref() {
+        Some((id, _, _)) => id.clone(),
+        None => lc.id.clone(),
+    }
+}
+
+/// GPROTECH: semente guardada ("lembrar senha") que ainda vale para este salt.
+fn semente_lembrada(lc: &Arc<RwLock<LoginConfigHandler>>, salt: &[u8; 16]) -> Option<[u8; 32]> {
+    use crate::gprotech::chave_acesso::ler_lembrada;
+    let lc = lc.read().unwrap();
+    ler_lembrada(&lc.password, salt).or_else(|| ler_lembrada(&lc.config.password, salt))
+}
+
+/// GPROTECH: login numa loja com a senha por assinatura. Usa a senha lembrada (se
+/// ainda for a da troca atual) ou pede a senha; manda só a assinatura do desafio.
+async fn handle_hash_gprotech(
+    lc: Arc<RwLock<LoginConfigHandler>>,
+    password_preset: &str,
+    hash: Hash,
+    salt: [u8; 16],
+    interface: &impl Interface,
+    peer: &mut Stream,
+) -> bool {
+    use crate::gprotech::chave_acesso::{assinar, derivar_semente, montar_lembrada};
+    let mut semente = semente_lembrada(&lc, &salt);
+    if semente.is_none() && !password_preset.is_empty() {
+        semente = derivar_semente(password_preset, &salt);
+    }
+    let assinatura = match semente {
+        Some(s) => {
+            let mut w = lc.write().unwrap();
+            w.password = montar_lembrada(&salt, &s);
+            w.password_source = Default::default();
+            drop(w);
+            assinar(&s, &id_da_loja(&lc), &hash.salt, &hash.challenge)
+        }
+        None => {
+            lc.write().unwrap().password = Vec::new();
+            interface.msgbox("input-password", "Password Required", "", "");
+            Vec::new()
+        }
+    };
+    send_login(lc.clone(), String::new(), String::new(), assinatura, peer).await;
+    lc.write().unwrap().hash = hash;
+    true
+}
+
 #[inline]
 fn try_get_password_from_personal_ab(lc: Arc<RwLock<LoginConfigHandler>>, password: &mut Vec<u8>) {
     let access_token = LocalConfig::get_option("access_token");
@@ -4834,6 +4888,30 @@ pub async fn handle_login_from_ui(
     remember: bool,
     peer: &mut Stream,
 ) {
+    // GPROTECH: loja com a senha por assinatura. A senha digitada vira a semente
+    // aqui mesmo; para a loja vai só a assinatura do desafio.
+    let hash = lc.read().unwrap().hash.clone();
+    if let Some(salt) = crate::gprotech::chave_acesso::salt_do_login(&hash.salt) {
+        use crate::gprotech::chave_acesso::{assinar, derivar_semente, montar_lembrada};
+        let semente = if password.is_empty() {
+            semente_lembrada(&lc, &salt)
+        } else {
+            lc.write().unwrap().remember = remember;
+            derivar_semente(&password, &salt)
+        };
+        let assinatura = match semente {
+            Some(s) => {
+                let mut w = lc.write().unwrap();
+                w.password = montar_lembrada(&salt, &s);
+                w.password_source = Default::default();
+                drop(w);
+                assinar(&s, &id_da_loja(&lc), &hash.salt, &hash.challenge)
+            }
+            None => Vec::new(),
+        };
+        send_login(lc.clone(), os_username, os_password, assinatura, peer).await;
+        return;
+    }
     let mut hash_password = if password.is_empty() {
         let mut password2 = lc.read().unwrap().password.clone();
         if password2.is_empty() {
